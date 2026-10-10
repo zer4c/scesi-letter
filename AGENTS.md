@@ -97,6 +97,12 @@ English.
 ## Tooling and validation
 
 - Manage Python dependencies and projects with Astral `uv`.
+- Use `pnpm` exclusively for JavaScript dependencies, scripts, builds, and
+  one-off package commands. Never use `npm`, `npx`, or Yarn, including inside
+  Dockerfiles, CI, setup scripts, or external-tool installation instructions.
+- Pin the pnpm version in `packageManager`, commit `pnpm-lock.yaml`, and use
+  `pnpm install --frozen-lockfile` for reproducible installations. Translate
+  external instructions to pnpm; do not copy forbidden commands into workflows.
 - Run the relevant backend tests and frontend production build before commit.
 - Validate Docker Compose configuration when Docker-related files change.
 - Never commit `node_modules`, virtual environments, build output, local logs,
