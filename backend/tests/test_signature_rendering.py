@@ -47,7 +47,7 @@ def test_signed_pdf_embeds_png_without_persisting_it() -> None:
 def test_signature_is_rejected_when_fixed_slot_overlaps_letter_body() -> None:
     settings = Settings()
     template = TemplateService.initial_settings(settings)
-    body = "\n\n".join(f"Paragraph {index}. " + ("Content " * 24) for index in range(24))
+    body = "\n\n".join(f"Paragraph {index}." for index in range(30))
 
     with pytest.raises(SignatureDoesNotFit):
         MarkdownPDFRenderer(settings).render(

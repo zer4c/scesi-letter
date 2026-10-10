@@ -149,6 +149,7 @@ class LetterPDF(FPDF):
         self.set_line_width(0.25)
         self.line(20, 28, self.w - 20, 28)
         self.set_text_color(0, 0, 0)
+        self.set_y(max(self.t_margin, self.get_y()))
 
     def footer(self) -> None:
         height = min(self.template.margin_bottom_mm, 32)
