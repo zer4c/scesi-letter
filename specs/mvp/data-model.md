@@ -19,7 +19,7 @@ others, invitation hashes, or storage filesystem paths in general API responses.
 | login_attempts | key_hash, window_start, failures, expires_at | Unique (key_hash, window_start); TTL cleanup; `key_hash` is an HMAC pseudonym, never a raw email or IP |
 | signature_envelopes | user_id, envelope_version, kdf, salt, wrapped_dek, wrapping_iv, ciphertext, image_iv, mime, updated_at | Unique user_id; all encryption values validated against permitted algorithm/bounds |
 | signing_authorizations | token_hash, user_id, document_id, version_id, source_hash, expires_at, consumed_at? | Unique token hash; consume once atomically; 60-second expiry checked directly; TTL removes expired security state |
-| templates | id, revision, active, public_asset_ids, header, footer, typography, margins, created_at | Unique (id, revision); exactly one selected template ID |
+| templates | template_id, revision, active, settings, created_by, created_at | Unique (template_id, revision); unique active revision per template ID; immutable revisions |
 | contacts | id, name, role_key, role_label, institution, career, emails, active, revision, created_by | Compound role/institution/career index; unique partial multikey normalized-email index |
 | events | id, slug, name, year, created_by | Unique (year, slug); slug immutable |
 | documents | id, owner_id, participant_ids, identifier?, type, identifier_year?, current_version?, draft_revision, created_at | Unique identifier when set; owner/participants indexes |

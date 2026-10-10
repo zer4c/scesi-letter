@@ -37,6 +37,12 @@ The bootstrap command creates an administrator only when no user exists; remove
 the bootstrap password from `.env` afterward. Invitations are created by that
 administrator in the authenticated API.
 
+The first backend start seeds one default template revision from `.env` footer
+settings. Administrators can change the phone list, footer URL, QR destination,
+typography, margins, and display text through `GET/PATCH /api/template`; each
+change creates a new immutable revision. Existing document versions keep their
+original template revision.
+
 To run the Vite development server while the Compose backend/database are up:
 
 ```bash

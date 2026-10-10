@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import SecretStr, field_validator, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     LLM_MAX_RETRIES: int = 2
 
     ARTIFACT_ROOT: Path = Path("/var/lib/scesi/artifacts")
-    TEMPLATE_FOOTER_PHONES: str = "[]"
+    TEMPLATE_FOOTER_PHONES: list[str] = Field(default_factory=list)
     TEMPLATE_FOOTER_URL: str = "https://scesi.org"
     TEMPLATE_QR_URL: str = "https://scesi.org"
     TEMPLATE_FOOTER_EMAIL: str = "contacto@scesi.org"

@@ -19,9 +19,10 @@ from app.modules.auth.documents import (
     UserDocument,
 )
 from app.modules.contact.documents import ContactDocument
+from app.modules.template.documents import TemplateDocument
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def create_mongo_client(settings: Settings) -> AsyncMongoClient:
@@ -72,6 +73,7 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
         document_models=[
             UserDocument,
             ContactDocument,
+            TemplateDocument,
             InvitationDocument,
             LoginAttemptDocument,
             SessionDocument,
@@ -91,8 +93,15 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
         raise RuntimeError("Database schema is newer than this application version")
 
     current_version = latest_migration.version if latest_migration is not None else 0
-    if current_version < 2:
-        await SchemaMigrationDocument(
-            version=2,
-            name="persistent_auth_and_login_limits",
-        ).insert()
+    migrations = {
+        2: "persistent_auth_and_login_limits",
+        3: "default_template_revisions",
+    }
+    for version, name in migrations.items():
+        if current_version < version:
+            await SchemaMigrationDocument(version=version, name=name).insert()
+
+    from app.core.config import get_settings
+    from app.modules.template.services import TemplateService
+
+    await TemplateService().seed_default_template(get_settings())
