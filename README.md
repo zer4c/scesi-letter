@@ -24,7 +24,9 @@ Frontend:
 
 ```bash
 cd frontend
-npm ci
+corepack enable
+corepack prepare pnpm@11.19.0 --activate
+pnpm install --frozen-lockfile
 npm start
 ```
 
