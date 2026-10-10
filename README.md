@@ -60,6 +60,9 @@ pnpm run dev
 
 Vite proxies API and WebSocket traffic to `http://localhost:8000`.
 
+Verify JavaScript/Python CRDT update, metadata-map, state-vector, and reconnect
+compatibility with `pnpm run interop:crdt` from `frontend/`.
+
 ## Backend commands
 
 ```bash

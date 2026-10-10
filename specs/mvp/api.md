@@ -70,6 +70,7 @@ payload returns the original result; same key with a different payload returns
 | POST /documents/{id}/analyze | expected_revision, kinds | graph job / suggestion results |
 | GET /documents/{id}/suggestions | source_hash | scoped structured suggestions |
 | POST /documents/{id}/suggestions/{id}/accept | expected_source_hash | checked edit through collaboration/document service |
+
 | POST /documents/{id}/suggestions/{id}/reject | none | proposal rejected |
 | GET /integrations | none | connection status; no token values |
 | POST /integrations/google/connect | kind, mode | authorization URL; institutional requires admin |
@@ -78,6 +79,16 @@ payload returns the original result; same key with a different payload returns
 | POST /documents/{id}/versions/{version_id}/sync | none | retry idempotent archive job |
 | POST /mail/send | version_id, connection_id, to, cc, bcc, subject, body | explicit confirmed dispatch job |
 | GET /jobs/{id} | none | actor-authorized status, sanitized errors |
+
+## Collaboration WebSocket
+
+Connect to `/ws/documents/{id}` with the `yjs` subprotocol. The browser must
+send the configured same-origin `Origin`; the existing active session and
+CSRF cookies are required. The server negotiates only `yjs`. Messages use the Yjs sync and
+awareness binary protocol; JSON lookalikes are rejected. Frames are limited to
+1 MiB. The server revalidates the session and document membership at most every
+15 seconds and before applying each update. A sync update is persisted before it
+is applied to the live room or broadcast as its durable acknowledgement.
 
 There is no document-delete route, generic signature decrypt route, or generic
 arbitrary webhook-execution route. The old demonstration `/automations/{id}/run`

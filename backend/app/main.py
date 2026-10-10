@@ -12,6 +12,7 @@ from app.core.routes import router as core_router
 from app.modules.automation.routes import router as automation_router
 from app.modules.auth.routes import membership_router, router as auth_router
 from app.modules.contact.routes import router as contact_router
+from app.modules.collaboration.routes import router as collaboration_router
 from app.modules.document.routes import job_router, router as document_router
 from app.modules.template.routes import router as template_router
 
@@ -49,4 +50,5 @@ app.include_router(contact_router, prefix=settings.API_PREFIX)
 app.include_router(template_router, prefix=settings.API_PREFIX)
 app.include_router(document_router, prefix=settings.API_PREFIX)
 app.include_router(job_router, prefix=settings.API_PREFIX)
+app.include_router(collaboration_router)
 app.include_router(automation_router)

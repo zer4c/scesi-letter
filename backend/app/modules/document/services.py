@@ -208,6 +208,64 @@ class DocumentService:
                 await asyncio.sleep(0.01 * (attempt + 1))
         raise HTTPException(status_code=409, detail="CONFLICT")
 
+    async def checkpoint_collaborative(
+        self,
+        document_id: UUID,
+        metadata: LetterMetadata,
+        body: str,
+        actor: UserDocument,
+        client: AsyncMongoClient,
+    ) -> None:
+        document = await self._documents.get_by_id(document_id)
+        if document is None:
+            raise HTTPException(status_code=404, detail="NOT_FOUND")
+        self._authorize(document, actor)
+        if not body.strip():
+            raise HTTPException(status_code=422, detail="VALIDATION_ERROR")
+        fields = LetterFields.model_validate(
+            metadata.model_dump(mode="python", exclude={"identifier", "template_revision"})
+        )
+        canonical_metadata = self._metadata(
+            fields,
+            document.identifier,
+            document.metadata.template_revision or 1,
+        )
+        _, source_hash = calculate_source_hash(canonical_metadata, body.strip())
+        if source_hash == document.source_hash:
+            return
+
+        if document.identifier is not None:
+            await self.save(
+                document_id,
+                DocumentSave(
+                    expected_revision=document.draft_revision,
+                    expected_source_hash=document.source_hash,
+                    metadata=fields,
+                    body=body.strip(),
+                ),
+                actor,
+                client,
+            )
+            return
+
+        async with transaction(client) as session:
+            current = await self._documents.get_by_id(document_id, session=session)
+            if current is None:
+                raise HTTPException(status_code=404, detail="NOT_FOUND")
+            self._authorize(current, actor)
+            if (
+                current.draft_revision != document.draft_revision
+                or not hmac.compare_digest(current.source_hash, document.source_hash)
+            ):
+                raise HTTPException(status_code=409, detail="CONFLICT")
+            current.document_type = canonical_metadata.document_type
+            current.metadata = canonical_metadata
+            current.body = body.strip()
+            current.source_hash = source_hash
+            current.draft_revision += 1
+            current.updated_at = datetime.now(UTC)
+            await self._documents.save(current, session)
+
     async def _save_once(
         self,
         document_id,

@@ -114,3 +114,10 @@ the primary organization archive. Document artifacts are not deleted by the UI.
 Preview bytes are transient and may be discarded. Signature plaintext and
 OAuth plaintext are never stored in this volume. Use restrictive permissions
 and include this volume in backup/restore procedures.
+
+Collaboration snapshots store the Yjs-compatible CRDT binary state and vector.
+Each accepted update is appended with a per-document sequence in the same
+transaction that advances the durable revision. A room snapshots and compacts
+at most every 100 updates; recovery applies the snapshot and every later
+sequence, rejecting gaps or a snapshot hash mismatch. A WebSocket update is not
+acknowledged to peers until its durable record commits.
