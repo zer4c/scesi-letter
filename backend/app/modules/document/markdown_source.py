@@ -9,7 +9,7 @@ from yaml.tokens import AliasToken, AnchorToken, TagToken
 from app.modules.document.schemas import LetterMetadata
 
 
-MAX_MARKDOWN_CHARACTERS = 100_000
+MAX_MARKDOWN_CHARACTERS = 120_000
 MAX_FRONT_MATTER_CHARACTERS = 16_000
 FRONT_MATTER_PATTERN = re.compile(r"\A---[ \t]*\n(.*?)\n---[ \t]*(?:\n|\Z)", re.DOTALL)
 

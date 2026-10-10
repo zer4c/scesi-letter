@@ -42,8 +42,6 @@ payload returns the original result; same key with a different payload returns
 | PATCH /users/{id} | active?, role?, expected_revision | admin-only, revision-safe; role promotion transfers the singleton admin role |
 | POST /auth/password/change | current_password, new_password, replacement_envelope? | atomic password/envelope handling |
 | POST /auth/password/reset-invitations | user_id | recovery invitation; admin; no signature recovery |
-| GET /users | pagination | public membership list; admin |
-| PATCH /users/{id} | active?, role?, expected_revision | admin; singleton role rules |
 | GET /signature | none | own encrypted envelope only |
 | PUT /signature | typed envelope v1 | own upload/replacement after reauthentication |
 | POST /signature/authorizations | password, document_id, source_hash, version_id | one-use 60-second token; owner only |
@@ -56,13 +54,13 @@ payload returns the original result; same key with a different payload returns
 | POST /contacts/import | connection_id | approved Google Contacts import job; P-05 |
 | GET /events | year?, pagination | event IDs and display names |
 | POST /events | name, year | sanitized immutable slug |
-| POST /documents | initial metadata?, body? | unnumbered draft, current revision |
-| GET /documents | pagination | only authorized documents |
+| POST /documents | metadata, body | unnumbered draft; no identifier or export job |
+| GET /documents | page, page_size | only authorized documents |
 | GET /documents/{id} | none | current snapshot/permissions and selected version status |
 | POST /documents/{id}/participants | user_id | creator/admin policy |
 | DELETE /documents/{id}/participants/{user_id} | none | revoke access, not document deletion |
 | POST /documents/{id}/save | expected_revision, expected_source_hash | allocate if needed, checkpoint; version/job refs |
-| POST /documents/{id}/preview | expected_revision, metadata, body | unsigned PDF; no persistent export |
+| GET /documents/{id}/versions | none | immutable version summaries; authorized participant |
 | GET /documents/{id}/versions/{version_id} | none | immutable metadata/status; authorized participant |
 | GET /documents/{id}/versions/{version_id}/pdf | none | scoped binary PDF |
 | GET /documents/{id}/versions/{version_id}/markdown | none | scoped UTF-8 Markdown |
@@ -90,6 +88,17 @@ sender/recipient snapshots, topic, signoff, and template revision. Supported
 body syntax includes headings, paragraphs, emphasis, `++underline++`, lists,
 tables, fenced code, `::: center` blocks, and `\pagebreak`. Raw HTML and embedded
 images are rejected; links render as labels only and never cause server fetches.
+
+Creating a draft does not number or export it. The first explicit save assigns
+the La Paz calendar year and the next atomic per-type counter, then stores the
+numbered Markdown snapshot, version record, and queued render job in one MongoDB
+transaction. Each later changed checkpoint creates a new version/job; unchanged
+source reuses the current version. A stale revision returns `CONFLICT` unless it
+is an identical retry of the already-current source.
+
+Create/save `metadata` contains editable `LetterFields`; clients must not send
+server-owned `identifier` or `template_revision`. The server preserves the
+draft's selected template revision and locks the numbered type.
 
 ## Payload Details
 

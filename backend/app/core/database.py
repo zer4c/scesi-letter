@@ -19,10 +19,16 @@ from app.modules.auth.documents import (
     UserDocument,
 )
 from app.modules.contact.documents import ContactDocument
+from app.modules.document.documents import (
+    DocumentVersionDocument,
+    ExportJobDocument,
+    LetterCounterDocument,
+    LetterDocument,
+)
 from app.modules.template.documents import TemplateDocument
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 def create_mongo_client(settings: Settings) -> AsyncMongoClient:
@@ -74,6 +80,10 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
             UserDocument,
             ContactDocument,
             TemplateDocument,
+            LetterDocument,
+            DocumentVersionDocument,
+            LetterCounterDocument,
+            ExportJobDocument,
             InvitationDocument,
             LoginAttemptDocument,
             SessionDocument,
@@ -96,6 +106,7 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
     migrations = {
         2: "persistent_auth_and_login_limits",
         3: "default_template_revisions",
+        4: "document_versioned_source",
     }
     for version, name in migrations.items():
         if current_version < version:
