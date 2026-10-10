@@ -1,21 +1,25 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.config import get_settings
+from app.core.lifespan import lifespan
 from app.core.routes import router as core_router
 from app.modules.automation.routes import router as automation_router
 
 
+settings = get_settings()
 app = FastAPI(
     title="SCESI Automation API",
     version="0.1.0",
-    description="API base for automations without external persistence.",
+    description="Academic letter automation API.",
+    lifespan=lifespan,
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200", "http://localhost:5173", "http://localhost:8080"],
-    allow_credentials=False,
-    allow_methods=["GET", "POST"],
-    allow_headers=["*"],
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "X-CSRF-Token", "Idempotency-Key"],
 )
 app.include_router(core_router)
 app.include_router(automation_router)

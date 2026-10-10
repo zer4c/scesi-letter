@@ -1,16 +1,120 @@
 services:
+  mongodb:
+    image: mongo:8.0@sha256:d0d926f94df099bff534b7ee5b5986458131a22489dfff8664509af0c1e2ca9c
+    entrypoint: ["/bin/bash", "/usr/local/bin/mongodb-entrypoint.sh"]
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?Set MONGO_ROOT_USERNAME in .env}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in .env}
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config_data:/data/configdb
+      - ./docker/mongodb-entrypoint.sh:/usr/local/bin/mongodb-entrypoint.sh:ro
+    ports:
+      - "127.0.0.1:27017:27017"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          mongosh --quiet --username "$$MONGO_INITDB_ROOT_USERNAME"
+          --password "$$MONGO_INITDB_ROOT_PASSWORD"
+          --authenticationDatabase admin --eval 'db.adminCommand("ping").ok'
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  mongo-init:
+    image: mongo:8.0@sha256:d0d926f94df099bff534b7ee5b5986458131a22489dfff8664509af0c1e2ca9c
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    entrypoint: ["mongosh"]
+    command:
+      - --host
+      - mongodb:27017
+      - --username
+      - ${MONGO_ROOT_USERNAME:?Set MONGO_ROOT_USERNAME in .env}
+      - --password
+      - ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in .env}
+      - --authenticationDatabase
+      - admin
+      - --eval
+      - >-
+        try { rs.status().ok; print("Replica set already initialized"); }
+        catch (error) {
+          const result = rs.initiate({_id: "rs0", members: [{_id: 0, host: "mongodb:27017"}]});
+          if (!result.ok) quit(1);
+          print("Replica set initialized");
+        }
+    restart: "no"
+
   backend:
     build:
       context: ./backend
     environment:
-      PYTHONUNBUFFERED: "1"
+      APP_ENV: ${APP_ENV:-development}
+      APP_TIMEZONE: ${APP_TIMEZONE:-America/La_Paz}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8080}
+      API_PREFIX: ${API_PREFIX:-/api}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080,http://localhost:5173}
+      MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME:?Set MONGO_ROOT_USERNAME in .env}:${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in .env}@mongodb:27017/?replicaSet=rs0&authSource=admin
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-scesi_automation}
+      MONGODB_REPLICA_SET: rs0
+      INTEGRATION_ENCRYPTION_KEY: ${INTEGRATION_ENCRYPTION_KEY:-}
+      INTEGRATION_KEY_ID: ${INTEGRATION_KEY_ID:-local-v1}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:8080/api/integrations/google/callback}
+      GOOGLE_DRIVE_ROOT_ID: ${GOOGLE_DRIVE_ROOT_ID:-}
+      LLM_PROVIDER: ${LLM_PROVIDER:-disabled}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-20b}
+      GROQ_REASONING_EFFORT: ${GROQ_REASONING_EFFORT:-low}
+      GROQ_INCLUDE_REASONING: ${GROQ_INCLUDE_REASONING:-false}
+      GROQ_LIMIT_RPM: ${GROQ_LIMIT_RPM:-30}
+      GROQ_LIMIT_RPD: ${GROQ_LIMIT_RPD:-1000}
+      GROQ_LIMIT_TPM: ${GROQ_LIMIT_TPM:-8000}
+      GROQ_LIMIT_TPD: ${GROQ_LIMIT_TPD:-200000}
+      GROQ_LIMIT_ITPM: ${GROQ_LIMIT_ITPM:-}
+      GROQ_LIMIT_OTPM: ${GROQ_LIMIT_OTPM:-}
+      LLM_REQUEST_TIMEOUT_SECONDS: ${LLM_REQUEST_TIMEOUT_SECONDS:-30}
+      LLM_MAX_INPUT_TOKENS: ${LLM_MAX_INPUT_TOKENS:-2000}
+      LLM_MAX_OUTPUT_TOKENS: ${LLM_MAX_OUTPUT_TOKENS:-750}
+      LLM_MAX_PASSES: ${LLM_MAX_PASSES:-2}
+      LLM_MAX_ANALYSIS_TOKENS: ${LLM_MAX_ANALYSIS_TOKENS:-6000}
+      LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-2}
+      ARTIFACT_ROOT: /var/lib/scesi/artifacts
+      TEMPLATE_FOOTER_PHONES: ${TEMPLATE_FOOTER_PHONES:-[]}
+      TEMPLATE_FOOTER_URL: ${TEMPLATE_FOOTER_URL:-https://scesi.org}
+      TEMPLATE_QR_URL: ${TEMPLATE_QR_URL:-https://scesi.org}
+      TEMPLATE_FOOTER_EMAIL: ${TEMPLATE_FOOTER_EMAIL:-contacto@scesi.org}
+      TEMPLATE_FOOTER_ADDRESS: ${TEMPLATE_FOOTER_ADDRESS:-Bloque central de la FCyT, ultimo piso, UMSS}
+      EMAIL_LOGO_URL: ${EMAIL_LOGO_URL:-https://i.imgur.com/npTbdR8.png}
+    depends_on:
+      mongo-init:
+        condition: service_completed_successfully
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - artifact_data:/var/lib/scesi/artifacts
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8000/api/ready', timeout=3)
       interval: 10s
-      timeout: 3s
-      retries: 5
+      timeout: 4s
+      retries: 8
+      start_period: 15s
+    restart: unless-stopped
 
   frontend:
     build:
@@ -19,4 +123,10 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+  mongodb_config_data:
+  artifact_data:

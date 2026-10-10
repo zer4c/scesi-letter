@@ -1,55 +1,64 @@
-# SCESI Automation Platform
+# SCESI Academic Letter Platform
 
-Base platform for institutional automations, with no database and no personal
-data included in the repository.
+Local-first application for collaborative academic letters, Markdown/PDF
+exports, owner-controlled signature images, recipient management, and approved
+automation workflows. The implementation follows the modular-monolith and
+security contracts in `specs/mvp/`.
 
-## Stack
+## Technology
 
-- Backend: FastAPI, Python 3.12 y `uv`.
-- Frontend: React 19, Vite y Node.js 24.
-- Ejecución: Docker Compose y Nginx como proxy del frontend.
-- State: process memory; it is lost on restart because there is no database yet.
+- Backend: FastAPI on Python 3.12, managed with Astral `uv`.
+- Frontend: React 19 and Vite on Node.js 24, managed only with pnpm 11.19.0.
+- Data: MongoDB replica set for transactions and persistent state.
+- Runtime: Docker Compose, Nginx, and a private artifact volume.
 
-## Desarrollo local
+## Local setup
 
-Backend:
+Requirements: Docker Compose v2, Node.js 24, and pnpm 11.19.0 for frontend
+development. Python 3.12 and `uv` are needed to run backend commands directly.
+
+Create the local environment file and start the application:
 
 ```bash
-cd backend
-uv sync
-uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+cp .env.example .env
+docker compose up --build
 ```
 
-Frontend:
+Open `http://localhost:8080`. FastAPI's API documentation is at
+`http://localhost:8000/docs`; readiness checks also verify the MongoDB replica
+set at `http://localhost:8000/api/ready`. MongoDB is bound to loopback on port
+27017 for direct backend development and is not exposed on other interfaces.
+
+To run the Vite development server while the Compose backend/database are up:
 
 ```bash
 cd frontend
 corepack enable
 corepack prepare pnpm@11.19.0 --activate
 pnpm install --frozen-lockfile
-npm start
+pnpm run dev
 ```
 
-The API is available at `http://localhost:8000/docs` and the Vite application
-at `http://localhost:5173`.
+Vite proxies API and WebSocket traffic to `http://localhost:8000`.
 
-## Docker
+## Backend commands
 
 ```bash
-docker compose up --build
+cd backend
+uv sync --frozen
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The application is available at `http://localhost:8080`; Nginx proxies `/api`
-to the backend.
+The backend expects a reachable MongoDB replica set configured through the
+repository-root `.env`. Use the Compose database for local development.
 
-## Automatizaciones
+## Configuration and data
 
-The API exposes in-memory automation creation, listing, and execution:
+`.env.example` contains development-only placeholders. Replace the MongoDB
+password before exposing services beyond the local machine. Provider credentials
+are optional and must remain in `.env`; they are not copied into image layers or
+the frontend bundle. Preserve the MongoDB data, MongoDB replica key, and artifact
+volumes together when restarting or backing up Compose.
 
-- `GET /api/health`
-- `GET /api/automations`
-- `POST /api/automations`
-- `POST /api/automations/{id}/run`
-
-Actions are intentionally safe and demonstrative for now. Each real action must
-be implemented as an explicit, validated adapter.
+No real personal data, signatures, private phone numbers, or credentials belong
+in this repository. See `AGENTS.md` and `specs/mvp/` before making changes.

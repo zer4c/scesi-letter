@@ -5,6 +5,8 @@ description = "FastAPI API for SCESI automations"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "fastapi>=0.115,<1.0",
+    "pydantic-settings>=2.7,<3",
+    "pymongo>=4.13,<5",
     "uvicorn>=0.34,<1.0",
 ]
 
