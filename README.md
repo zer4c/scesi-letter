@@ -94,11 +94,16 @@ repository-root `.env`. Use the Compose database for local development.
 
 ## Configuration and data
 
-`.env.example` contains development-only placeholders. Replace the MongoDB
-password before exposing services beyond the local machine. Provider credentials
-are optional and must remain in `.env`; they are not copied into image layers or
-the frontend bundle. Preserve the MongoDB data, MongoDB replica key, and artifact
-volumes together when restarting or backing up Compose.
+`.env.example` contains development-only placeholders, including a known
+MongoDB password and non-random key samples. Never deploy it unchanged or treat
+it as a secrets file. Replace keys and passwords in the ignored `.env` file;
+provider credentials are optional and are supplied at runtime, not baked into
+images or the frontend bundle. Preserve the MongoDB data and artifact volumes
+together. Use [docs/operations.md](docs/operations.md) for worker recovery,
+backup, and an isolated restore drill.
 
 No real personal data, signatures, private phone numbers, or credentials belong
 in this repository. See `AGENTS.md` and `specs/mvp/` before making changes.
+
+For worker recovery, encrypted backup handling, and an isolated restore drill,
+see [docs/operations.md](docs/operations.md).
