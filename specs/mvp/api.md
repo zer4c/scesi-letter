@@ -85,7 +85,7 @@ payload returns the original result; same key with a different payload returns
 | POST /integrations/{id}/disconnect | none | own personal or admin institutional |
 | GET /documents/{id}/versions/{version_id}/archive | none | archive job state and mapped immutable file IDs |
 | POST /documents/{id}/versions/{version_id}/sync | topic_category?, confirm_miscellaneous? | retry idempotent archive job; miscellaneous requires explicit confirmation |
-| POST /mail/send | version_id, connection_id, to, cc, bcc, subject, body | explicit confirmed dispatch job |
+| POST /mail/send | document_id, version_id, connection_id, to, cc, bcc, subject, body, confirmed; `Idempotency-Key` | explicit confirmed dispatch job; selected version must be finalized and archived |
 | GET /jobs/{id} | none | actor-authorized status, sanitized errors |
 
 ## Collaboration WebSocket

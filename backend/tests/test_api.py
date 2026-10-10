@@ -1,8 +1,9 @@
 from types import SimpleNamespace
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 from pycrdt import Doc, Map
+from pydantic import ValidationError
 
 from app.main import app
 from app.modules.auth.routes import require_current_user
@@ -10,8 +11,6 @@ from app.modules.collaboration.services import CollaborationService
 from app.modules.document.schemas import DocumentCreate, LetterFields
 from app.modules.event.services import EventService
 from app.modules.signature.schemas import SignatureEnvelopeInput
-from pydantic import ValidationError
-
 
 client = TestClient(app)
 
@@ -45,6 +44,12 @@ def test_contact_directory_supports_selected_record_reload():
     assert "post" in paths["/api/contacts"]
     assert "get" in paths["/api/contacts/{contact_id}"]
     assert "patch" in paths["/api/contacts/{contact_id}"]
+
+
+def test_gmail_dispatch_and_scoped_job_status_routes_exist():
+    paths = app.openapi()["paths"]
+    assert "post" in paths["/api/mail/send"]
+    assert "get" in paths["/api/jobs/{job_id}"]
     assert (
         "post"
         in paths["/api/documents/{document_id}/suggestions/{suggestion_id}/reject"]

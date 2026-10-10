@@ -9,8 +9,8 @@ from app.modules.auth.documents import UserDocument
 from app.modules.auth.routes import auth_service, require_current_user
 from app.modules.auth.services import AuthService
 from app.modules.collaboration.services import CollaborationService
-from app.modules.document.markdown_source import InvalidMarkdownSource
 from app.modules.document.jobs import ArtifactService
+from app.modules.document.markdown_source import InvalidMarkdownSource
 from app.modules.document.pdf_renderer import InvalidMarkdown, RenderLimitExceeded
 from app.modules.document.schemas import (
     DocumentCreate,
@@ -24,8 +24,10 @@ from app.modules.document.schemas import (
     RenderRequest,
 )
 from app.modules.document.services import DocumentRenderService, DocumentService
+from app.modules.mail.documents import MailDispatchJobDocument
+from app.modules.mail.schemas import MailJobResponse
+from app.modules.mail.services import MailDispatchService
 from app.modules.template.services import TemplateService
-
 
 router = APIRouter(prefix="/documents", tags=["document rendering"])
 job_router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -156,12 +158,18 @@ async def download_markdown(
     )
 
 
-@job_router.get("/{job_id}", response_model=JobStatusResponse)
+@job_router.get("/{job_id}", response_model=JobStatusResponse | MailJobResponse)
 async def get_job_status(
     job_id: UUID,
     actor: UserDocument = Depends(require_current_user),
     service: ArtifactService = Depends(artifact_service),
-) -> JobStatusResponse:
+) -> JobStatusResponse | MailJobResponse:
+    mail_job = await MailDispatchJobDocument.find_one(
+        MailDispatchJobDocument.id == job_id,
+        MailDispatchJobDocument.user_id == actor.id,
+    )
+    if mail_job is not None:
+        return MailDispatchService(get_settings())._response(mail_job)
     return await service.get_job_status(job_id, actor)
 
 

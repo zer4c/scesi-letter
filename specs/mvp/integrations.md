@@ -144,6 +144,14 @@ resolved, at most 24 hours initially. Keep job ID, actor, version/hash,
 idempotency key, outcome, and timestamps for a proposed seven-day operational
 window. Purge expired payloads without touching documents/Drive files. This is
 operational deduplication, not a replicated Gmail history or signature audit.
+The MVP stores dispatch content in a separate AES-GCM encrypted payload record
+with a 24-hour TTL; BCC never appears in job/status responses or logs. Dispatch
+jobs are claimed once. A timeout, provider 5xx, or expired running lease becomes
+`unknown`; never retry a potentially submitted message automatically. Known
+provider rejection becomes `failed` and requires a deliberate new user action.
+Only a finalized, archived version with a matching archived PDF hash is
+sendable. Institutional Gmail may be used by any active member, while only an
+administrator can connect or disconnect that shared connection.
 
 ## Database and Collaboration Libraries
 

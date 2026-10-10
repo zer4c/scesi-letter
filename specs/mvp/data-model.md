@@ -32,6 +32,8 @@ others, invitation hashes, or storage filesystem paths in general API responses.
 | oauth_states | state_hash, user_id, kind, mode, scopes, encrypted_code_verifier, expires_at, used_at | Unique state hash; PKCE verifier encrypted; user-bound single use and direct expiry check |
 | letter_suggestions | id, document_id, source_hash, kind, original?, replacement?, field?, start?, end?, reason, status, created_at | Scoped to document; explicit acceptance, no implicit edits |
 | jobs | id, kind, version_id?, user_id?, connection_id?, idempotency_key, status, attempt, lease_until?, next_attempt_at?, error_code?, encrypted_payload? | Unique (user_id, kind, idempotency_key); index status/lease |
+| mail_dispatch_jobs | id, document_id, version_id, connection_id, user_id, idempotency_key, request_fingerprint, pdf_hash, status, attempt, submission_started_at?, error_code?, created_at, updated_at | Unique (user_id, kind, idempotency_key); seven-day TTL; no addresses or body |
+| mail_dispatch_payloads | job_id, user_id, encrypted_payload, expires_at | Unique job_id; encrypted and TTL-cleaned after 24 hours |
 | llm_quota_gates | id, model, revision, provider remaining/reset headers | Unique model; transaction-serialized shared organization/model gate |
 | llm_quota_reservations | id, model, estimated/actual input/output tokens, status, created_at, settled_at | Rolling model/time index; uncertain reservations count estimates; settled events count actual usage; 48-hour TTL is cleanup only; no prompt/body/contact data |
 

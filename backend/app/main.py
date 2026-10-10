@@ -19,6 +19,7 @@ from app.modules.document.routes import router as document_router
 from app.modules.event.routes import router as event_router
 from app.modules.integration.routes import archive_router
 from app.modules.integration.routes import router as integration_router
+from app.modules.mail.routes import router as mail_router
 from app.modules.signature.routes import document_signing_router
 from app.modules.signature.routes import password_router as signature_password_router
 from app.modules.signature.routes import router as signature_router
@@ -58,6 +59,7 @@ app.include_router(template_router, prefix=settings.API_PREFIX)
 app.include_router(document_router, prefix=settings.API_PREFIX)
 app.include_router(event_router, prefix=settings.API_PREFIX)
 app.include_router(integration_router, prefix=settings.API_PREFIX)
+app.include_router(mail_router, prefix=settings.API_PREFIX)
 app.include_router(archive_router, prefix=settings.API_PREFIX)
 app.include_router(signature_router, prefix=settings.API_PREFIX)
 app.include_router(signature_password_router, prefix=settings.API_PREFIX)

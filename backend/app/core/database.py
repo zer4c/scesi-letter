@@ -44,10 +44,14 @@ from app.modules.integration.documents import (
     IntegrationConnectionDocument,
     OAuthStateDocument,
 )
+from app.modules.mail.documents import (
+    MailDispatchJobDocument,
+    MailDispatchPayloadDocument,
+)
 from app.modules.signature.documents import SigningAuthorizationDocument
 from app.modules.template.documents import TemplateDocument
 
-SCHEMA_VERSION = 12
+SCHEMA_VERSION = 13
 
 
 def create_mongo_client(settings: Settings) -> AsyncMongoClient:
@@ -121,6 +125,8 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
             LLMQuotaGateDocument,
             LLMQuotaReservationDocument,
             DriveArchiveMappingDocument,
+            MailDispatchJobDocument,
+            MailDispatchPayloadDocument,
         ],
     )
 
@@ -141,6 +147,7 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
         10: "encrypted_google_connections",
         11: "durable_drive_archiving",
         12: "private_letter_assistance_and_quota_reservations",
+        13: "private_gmail_dispatch_jobs",
     }
     migration_collection = SchemaMigrationDocument.get_pymongo_collection()
     for version, name in migrations.items():

@@ -12,7 +12,7 @@ from app.core.database import (
 )
 from app.modules.document.jobs import RenderWorker
 from app.modules.integration.archive import DriveArchiveWorker
-
+from app.modules.mail.worker import MailDispatchWorker
 
 LOGGER = logging.getLogger("scesi.worker")
 POLL_SECONDS = 1.0
@@ -23,6 +23,7 @@ async def run_worker() -> None:
     client = create_mongo_client(settings)
     worker = RenderWorker(settings, client)
     archive_worker = DriveArchiveWorker(settings, client)
+    mail_worker = MailDispatchWorker(settings, client)
     try:
         await check_database(client, settings.MONGODB_REPLICA_SET)
         await initialize_persistence(client[settings.MONGODB_DATABASE])
@@ -31,6 +32,7 @@ async def run_worker() -> None:
             try:
                 processed = await worker.run_once()
                 processed = await archive_worker.run_once() or processed
+                processed = await mail_worker.run_once() or processed
             except PyMongoError:
                 LOGGER.warning("Document export worker database operation failed")
                 processed = False

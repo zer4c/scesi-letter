@@ -1,8 +1,8 @@
 import base64
-from datetime import UTC, datetime, timedelta
 import hashlib
 import json
 import secrets
+from datetime import UTC, datetime, timedelta
 from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
@@ -30,10 +30,9 @@ from app.modules.integration.schemas import (
     DriveRootRequest,
     GoogleAuthorizationResponse,
     GoogleConnectionRequest,
-    IntegrationConnectionStatus,
     IntegrationConnectionsResponse,
+    IntegrationConnectionStatus,
 )
-
 
 GOOGLE_AUTHORIZATION_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
@@ -50,6 +49,7 @@ PROVIDER_SCOPES = {
     "gmail": "https://www.googleapis.com/auth/gmail.send",
     "drive": "https://www.googleapis.com/auth/drive.file",
 }
+GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send"
 EMAIL_ADAPTER = TypeAdapter(EmailStr)
 
 
@@ -63,10 +63,15 @@ class GoogleConnectionService:
         self._transport = transport
 
     async def list_connections(self, actor: UserDocument) -> IntegrationConnectionsResponse:
+        institutional_filter = (
+            {"mode": "institutional"}
+            if actor.role == "admin"
+            else {"mode": "institutional", "kind": "gmail"}
+        )
         query: dict[str, object] = {
             "$or": [
                 {"mode": "personal", "owner_user_id": actor.id},
-                {"mode": "institutional"} if actor.role == "admin" else {"_id": None},
+                institutional_filter,
             ]
         }
         cursor = IntegrationConnectionDocument.get_pymongo_collection().find(query).sort(
@@ -344,7 +349,11 @@ class GoogleConnectionService:
         actor: UserDocument | None,
     ) -> str:
         if actor is None and not (
-            connection.kind == "drive" and connection.mode == "institutional"
+            connection.mode == "institutional"
+            and (
+                connection.kind == "drive"
+                or (connection.kind == "gmail" and GMAIL_SEND_SCOPE in connection.scopes)
+            )
         ):
             raise HTTPException(status_code=404, detail="NOT_FOUND")
         if actor is not None and not self._can_access(connection, actor):
