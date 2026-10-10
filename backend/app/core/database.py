@@ -32,11 +32,15 @@ from app.modules.document.documents import (
     LetterDocument,
 )
 from app.modules.event.documents import EventDocument
+from app.modules.integration.documents import (
+    IntegrationConnectionDocument,
+    OAuthStateDocument,
+)
 from app.modules.signature.documents import SigningAuthorizationDocument
 from app.modules.template.documents import TemplateDocument
 
 
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 
 def create_mongo_client(settings: Settings) -> AsyncMongoClient:
@@ -102,6 +106,8 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
             SigningAuthorizationDocument,
             SchemaMigrationDocument,
             EventDocument,
+            IntegrationConnectionDocument,
+            OAuthStateDocument,
         ],
     )
 
@@ -119,6 +125,7 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
         7: "owner_signature_envelopes",
         8: "user_credential_revisions",
         9: "one_use_signing_authorizations",
+        10: "encrypted_google_connections",
     }
     migration_collection = SchemaMigrationDocument.get_pymongo_collection()
     for version, name in migrations.items():

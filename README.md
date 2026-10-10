@@ -39,6 +39,13 @@ The bootstrap command creates an administrator only when no user exists; remove
 the bootstrap password from `.env` afterward. Invitations are created by that
 administrator in the authenticated API.
 
+For Google connections, configure the OAuth client ID/secret and register the
+exact `GOOGLE_REDIRECT_URI`. Generate a separate token-encryption key with
+`openssl rand -base64 32` and set it as `INTEGRATION_ENCRYPTION_KEY`. Never reuse
+the rate-limit key or signature password as this key. Gmail and Drive access
+remain unavailable until these settings and the approved Google APIs are
+configured; personal connection tokens are visible only to their owner.
+
 The first backend start seeds one default template revision from `.env` footer
 settings. Administrators can change the phone list, footer URL, QR destination,
 typography, margins, and display text through `GET/PATCH /api/template`; each

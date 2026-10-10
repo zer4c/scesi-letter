@@ -15,6 +15,7 @@ from app.modules.contact.routes import router as contact_router
 from app.modules.collaboration.routes import router as collaboration_router
 from app.modules.document.routes import job_router, router as document_router
 from app.modules.event.routes import router as event_router
+from app.modules.integration.routes import router as integration_router
 from app.modules.signature.routes import password_router as signature_password_router
 from app.modules.signature.routes import router as signature_router
 from app.modules.signature.routes import document_signing_router
@@ -54,6 +55,7 @@ app.include_router(contact_router, prefix=settings.API_PREFIX)
 app.include_router(template_router, prefix=settings.API_PREFIX)
 app.include_router(document_router, prefix=settings.API_PREFIX)
 app.include_router(event_router, prefix=settings.API_PREFIX)
+app.include_router(integration_router, prefix=settings.API_PREFIX)
 app.include_router(signature_router, prefix=settings.API_PREFIX)
 app.include_router(signature_password_router, prefix=settings.API_PREFIX)
 app.include_router(document_signing_router, prefix=settings.API_PREFIX)

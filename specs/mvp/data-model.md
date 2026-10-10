@@ -28,8 +28,8 @@ others, invitation hashes, or storage filesystem paths in general API responses.
 | document_versions | id, document_id, version_number, metadata_snapshot, body_snapshot, template_revision, source_hash, md_hash?, pdf_hash?, signature_owner_id?, status, finalized_at?, created_by, created_at | Unique (document_id, version_number); snapshots immutable |
 | letter_counters | organization, type, year, value | Unique (organization, type, year) |
 | archive_mappings | version_id, root_id, folder_ids, md_file_id?, pdf_file_id?, md_hash?, pdf_hash?, status | Unique version_id |
-| integration_connections | id, kind, owner_user_id?, mode, google_account, encrypted_tokens, scopes, state, expires_at | Unique (kind, mode, owner_user_id); encrypted credential fields |
-| oauth_states | state_hash, user_id, purpose, pkce_verifier_encrypted, expires_at, used_at | Unique state hash; single use, expiry checked before consumption |
+| integration_connections | id, kind, owner_user_id?, mode, google_account, encrypted_tokens{key_id,nonce,ciphertext}, scopes, status, root_folder_id?, expires_at | Unique (kind, mode, owner_user_id); AES-GCM credentials bound to connection identity |
+| oauth_states | state_hash, user_id, kind, mode, scopes, encrypted_code_verifier, expires_at, used_at | Unique state hash; PKCE verifier encrypted; user-bound single use and direct expiry check |
 | suggestions | id, document_id, source_hash, kind, original?, replacement?, field?, start?, end?, reason, status, created_at | Scoped to document; explicit acceptance, no implicit edits |
 | jobs | id, kind, version_id?, user_id?, connection_id?, idempotency_key, status, attempt, lease_until?, next_attempt_at?, error_code?, encrypted_payload? | Unique (user_id, kind, idempotency_key); index status/lease |
 | llm_quota_groups | group_key, configured_limits, observed_header_caps?, revision, updated_at | Unique group_key; serialized compare-and-swap/transaction updates for one organization's verified model quota pool |

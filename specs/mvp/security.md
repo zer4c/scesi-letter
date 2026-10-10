@@ -145,6 +145,11 @@ server key from deployment secrets. Use AES-GCM envelope encryption or a vetted
 library; store key ID for rotation. Do not confuse this key with user signature
 keys. Database access without the server key must not reveal refresh tokens.
 Administrators cannot retrieve personal connection tokens through any endpoint.
+The active `INTEGRATION_ENCRYPTION_KEY` is canonical Base64 for 32 random bytes;
+generate it with `openssl rand -base64 32`. AES-GCM additional data binds each
+encrypted value to its connection or OAuth state identity. A missing key fails
+closed for connection/refresh operations; it does not disable unrelated app
+startup. Key rotation requires retaining key IDs and a reviewed migration path.
 
 **SEC-013** Validate OAuth state, user binding, expected scopes, PKCE where
 supported, expiration, and one-time use. Connection completion displays the

@@ -1,9 +1,11 @@
+import base64
+import binascii
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import Field, SecretStr, field_validator, model_validator
+from pydantic import Field, SecretStr, ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -81,6 +83,65 @@ class Settings(BaseSettings):
         parsed = urlsplit(value.get_secret_value())
         if parsed.scheme not in {"mongodb", "mongodb+srv"} or not parsed.hostname:
             raise ValueError("MONGODB_URI must be a valid MongoDB connection URI")
+        return value
+
+    @field_validator("INTEGRATION_ENCRYPTION_KEY")
+    @classmethod
+    def validate_integration_key(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is None:
+            return None
+        raw = value.get_secret_value()
+        try:
+            decoded = base64.b64decode(raw, validate=True)
+        except (binascii.Error, ValueError) as error:
+            raise ValueError(
+                "INTEGRATION_ENCRYPTION_KEY must be canonical Base64 for 32 bytes"
+            ) from error
+        if len(decoded) != 32 or base64.b64encode(decoded).decode("ascii") != raw:
+            raise ValueError(
+                "INTEGRATION_ENCRYPTION_KEY must be canonical Base64 for 32 bytes"
+            )
+        return value
+
+    @field_validator("INTEGRATION_KEY_ID")
+    @classmethod
+    def validate_integration_key_id(cls, value: str) -> str:
+        normalized = value.strip()
+        if (
+            not normalized
+            or len(normalized) > 64
+            or any(char.isspace() for char in normalized)
+        ):
+            raise ValueError("INTEGRATION_KEY_ID must be a non-empty identifier")
+        return normalized
+
+    @field_validator("GOOGLE_REDIRECT_URI")
+    @classmethod
+    def validate_google_redirect_uri(
+        cls,
+        value: str,
+        info: ValidationInfo,
+    ) -> str:
+        parsed = urlsplit(value)
+        expected_path = (
+            f"{info.data.get('API_PREFIX', '/api')}/integrations/google/callback"
+        )
+        local_http = parsed.scheme == "http" and parsed.hostname in {
+            "localhost",
+            "127.0.0.1",
+        }
+        if (
+            (parsed.scheme != "https" and not local_http)
+            or not parsed.hostname
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.path != expected_path
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError(
+                "GOOGLE_REDIRECT_URI must be HTTPS or localhost with the API callback path"
+            )
         return value
 
     @field_validator("MONGODB_DATABASE")

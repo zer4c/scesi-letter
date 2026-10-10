@@ -95,6 +95,15 @@ scopes/policy during T00. `drive.file` access is limited to selected/app-managed
 files; prove selected root and folder traversal work. Do not silently upgrade to
 full Drive/mailbox access. Gmail send-only cannot extract mailbox correspondents.
 
+The connection flow uses state-bound PKCE (S256), requests only `openid`,
+`email`, and the single provider scope needed for the connection, and rejects
+scope sets that differ from the request. Personal mode is Gmail-only and visible
+to that account owner. Institutional Gmail/Drive mode is administrator-only;
+Drive root selection verifies that the folder is an accessible, non-trashed
+Google Drive folder. The callback requires the same authenticated user that
+started consent. Refresh tokens and PKCE verifiers are AES-GCM encrypted with
+separate context-bound authenticated data.
+
 Document consent/testing restrictions, token expiration/revocation, and any app
 verification obligations observed in the current console. A testing-mode token
 may require reconnection; do not promise permanent offline access.
