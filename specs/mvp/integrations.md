@@ -116,6 +116,13 @@ names safely. Associate each uploaded file with app metadata including document
 ID, version ID, artifact kind, and hash. Reconcile after a timeout before creating
 another file. Mark a pair archived only after both files exist and match metadata.
 Keep partial success visible and retry the missing side without overwriting.
+Classify only from explicit letter type mappings; require a user-selected topic
+when classification is ambiguous, and require explicit confirmation before using
+the final-resort `miscellaneous` category. Folder mappings use stable event IDs,
+so renaming an event never redirects a previous folder. A timed-out create is
+reconciled by its app property before another create is attempted. If an
+application-managed file is externally removed, report the missing mapping and
+do not recreate or overwrite it silently.
 
 Do not derive folder paths directly from untrusted names. Use a sanitized slug
 and a stored event identity. Retain archived content when connections change.

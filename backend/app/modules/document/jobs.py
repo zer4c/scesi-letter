@@ -21,6 +21,7 @@ from app.modules.document.services import DocumentService
 from app.modules.auth.documents import UserDocument
 from app.modules.document.repositories import LetterRepository, VersionRepository
 from app.modules.document.schemas import JobStatusResponse
+from app.modules.integration.repositories import DriveArchiveJobRepository
 
 
 LOGGER = logging.getLogger(__name__)
@@ -164,6 +165,12 @@ class RenderWorker:
             current_version.status = "ready"
             current_version.pdf_hash = pdf_hash
             await current_version.save(session=session)
+            await DriveArchiveJobRepository().enqueue(
+                current_version.document_id,
+                current_version.id,
+                current_version.created_by,
+                session,
+            )
 
             current_job.status = "succeeded"
             current_job.lease_owner = None
@@ -252,7 +259,7 @@ class ArtifactService:
         version = await self._versions.get_by_id(document_id, version_id)
         if version is None:
             raise HTTPException(status_code=404, detail="NOT_FOUND")
-        if version.status not in {"ready", "archived"}:
+        if version.status not in {"ready", "archived", "sync_failed"}:
             raise HTTPException(status_code=409, detail="CONFLICT")
         filename, expected_hash, media_type = (
             ("letter.pdf", version.pdf_hash, "application/pdf")

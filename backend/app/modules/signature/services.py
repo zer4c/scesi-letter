@@ -37,6 +37,7 @@ from app.modules.signature.schemas import (
     SigningAuthorizationResponse,
 )
 from app.modules.template.repositories import TemplateRepository
+from app.modules.integration.repositories import DriveArchiveJobRepository
 
 
 SIGNING_AUTHORIZATION_SECONDS = 60
@@ -238,6 +239,12 @@ class SignatureRenderService:
                     pdf_hash,
                 )
                 await signed_version.insert(session=session)
+                await DriveArchiveJobRepository().enqueue(
+                    document.id,
+                    signed_version.id,
+                    actor.id,
+                    session,
+                )
                 document.latest_version_number = signed_version.version_number
                 document.current_version = signed_version.id
                 document.finalized_version_id = signed_version.id

@@ -82,7 +82,8 @@ payload returns the original result; same key with a different payload returns
 | GET /integrations/google/callback | code, state | authenticated session plus one-use state; encrypted tokens; account status only |
 | PUT /integrations/{id}/root | folder_id | verify accessible Drive folder and select as institutional archive root; admin |
 | POST /integrations/{id}/disconnect | none | own personal or admin institutional |
-| POST /documents/{id}/versions/{version_id}/sync | none | retry idempotent archive job |
+| GET /documents/{id}/versions/{version_id}/archive | none | archive job state and mapped immutable file IDs |
+| POST /documents/{id}/versions/{version_id}/sync | topic_category?, confirm_miscellaneous? | retry idempotent archive job; miscellaneous requires explicit confirmation |
 | POST /mail/send | version_id, connection_id, to, cc, bcc, subject, body | explicit confirmed dispatch job |
 | GET /jobs/{id} | none | actor-authorized status, sanitized errors |
 

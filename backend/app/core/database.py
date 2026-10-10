@@ -33,6 +33,9 @@ from app.modules.document.documents import (
 )
 from app.modules.event.documents import EventDocument
 from app.modules.integration.documents import (
+    DriveArchiveJobDocument,
+    DriveArchiveMappingDocument,
+    DriveFolderMappingDocument,
     IntegrationConnectionDocument,
     OAuthStateDocument,
 )
@@ -40,7 +43,7 @@ from app.modules.signature.documents import SigningAuthorizationDocument
 from app.modules.template.documents import TemplateDocument
 
 
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 
 
 def create_mongo_client(settings: Settings) -> AsyncMongoClient:
@@ -108,6 +111,9 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
             EventDocument,
             IntegrationConnectionDocument,
             OAuthStateDocument,
+            DriveArchiveJobDocument,
+            DriveFolderMappingDocument,
+            DriveArchiveMappingDocument,
         ],
     )
 
@@ -126,6 +132,7 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
         8: "user_credential_revisions",
         9: "one_use_signing_authorizations",
         10: "encrypted_google_connections",
+        11: "durable_drive_archiving",
     }
     migration_collection = SchemaMigrationDocument.get_pymongo_collection()
     for version, name in migrations.items():

@@ -341,9 +341,13 @@ class GoogleConnectionService:
     async def get_access_token(
         self,
         connection: IntegrationConnectionDocument,
-        actor: UserDocument,
+        actor: UserDocument | None,
     ) -> str:
-        if not self._can_access(connection, actor):
+        if actor is None and not (
+            connection.kind == "drive" and connection.mode == "institutional"
+        ):
+            raise HTTPException(status_code=404, detail="NOT_FOUND")
+        if actor is not None and not self._can_access(connection, actor):
             raise HTTPException(status_code=404, detail="NOT_FOUND")
         if connection.status != "active":
             raise HTTPException(status_code=409, detail="GOOGLE_REAUTH_REQUIRED")

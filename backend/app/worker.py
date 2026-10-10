@@ -11,6 +11,7 @@ from app.core.database import (
     initialize_persistence,
 )
 from app.modules.document.jobs import RenderWorker
+from app.modules.integration.archive import DriveArchiveWorker
 
 
 LOGGER = logging.getLogger("scesi.worker")
@@ -21,13 +22,15 @@ async def run_worker() -> None:
     settings = get_settings()
     client = create_mongo_client(settings)
     worker = RenderWorker(settings, client)
+    archive_worker = DriveArchiveWorker(settings, client)
     try:
         await check_database(client, settings.MONGODB_REPLICA_SET)
         await initialize_persistence(client[settings.MONGODB_DATABASE])
-        LOGGER.info("Document export worker started")
+        LOGGER.info("Document export and Drive archive worker started")
         while True:
             try:
                 processed = await worker.run_once()
+                processed = await archive_worker.run_once() or processed
             except PyMongoError:
                 LOGGER.warning("Document export worker database operation failed")
                 processed = False

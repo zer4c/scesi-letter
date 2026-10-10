@@ -8,6 +8,8 @@ from app.core.database import get_mongo_client
 from app.modules.auth.documents import UserDocument
 from app.modules.auth.routes import auth_service, require_current_user
 from app.modules.auth.services import AuthService
+from app.modules.document.documents import DocumentVersionDocument, LetterDocument
+from app.modules.document.services import DocumentService
 from app.modules.integration.schemas import (
     ConnectionMutationResponse,
     DriveRootRequest,
@@ -16,10 +18,20 @@ from app.modules.integration.schemas import (
     IntegrationConnectionsResponse,
     IntegrationConnectionStatus,
 )
+from app.modules.integration.archive_schemas import (
+    ArchiveRetryRequest,
+    ArchiveRetryResponse,
+    ArchiveStatusResponse,
+)
+from app.modules.integration.documents import (
+    DriveArchiveJobDocument, DriveArchiveMappingDocument,
+)
+from app.modules.integration.repositories import DriveArchiveJobRepository
 from app.modules.integration.services import GoogleConnectionService
 
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
+archive_router = APIRouter(prefix="/documents", tags=["document archive"])
 
 
 def integration_service(
@@ -89,3 +101,66 @@ async def disconnect_google(
 ) -> ConnectionMutationResponse:
     auth.require_csrf_header(request)
     return await service.disconnect(connection_id, actor, client)
+
+
+@archive_router.get("/{document_id}/versions/{version_id}/archive",
+                    response_model=ArchiveStatusResponse)
+async def get_archive_status(
+    document_id: UUID,
+    version_id: UUID,
+    actor: UserDocument = Depends(require_current_user),
+) -> ArchiveStatusResponse:
+    document = await LetterDocument.find_one(LetterDocument.id == document_id)
+    version = await DocumentVersionDocument.find_one(
+        DocumentVersionDocument.id == version_id,
+        DocumentVersionDocument.document_id == document_id,
+    )
+    if document is None or version is None:
+        raise HTTPException(status_code=404, detail="NOT_FOUND")
+    DocumentService._authorize(document, actor)
+    job = await DriveArchiveJobDocument.find_one(
+        DriveArchiveJobDocument.version_id == version_id
+    )
+    if job is None:
+        raise HTTPException(status_code=404, detail="NOT_FOUND")
+    mapping = await DriveArchiveMappingDocument.find_one(
+        DriveArchiveMappingDocument.version_id == version_id
+    )
+    return ArchiveStatusResponse(
+        job_id=job.id, document_id=document_id, version_id=version_id,
+        status=job.status, attempt=job.attempt, error_code=job.error_code,
+        root_folder_id=job.root_folder_id or (mapping.root_folder_id if mapping else None),
+        markdown_file_id=mapping.markdown_file_id if mapping else None,
+        pdf_file_id=mapping.pdf_file_id if mapping else None,
+        updated_at=job.updated_at,
+    )
+
+
+@archive_router.post("/{document_id}/versions/{version_id}/sync",
+                     response_model=ArchiveRetryResponse)
+async def retry_archive(
+    document_id: UUID,
+    version_id: UUID,
+    payload: ArchiveRetryRequest,
+    request: Request,
+    actor: UserDocument = Depends(require_current_user),
+    auth: AuthService = Depends(auth_service),
+) -> ArchiveRetryResponse:
+    auth.require_csrf_header(request)
+    document = await LetterDocument.find_one(LetterDocument.id == document_id)
+    version = await DocumentVersionDocument.find_one(
+        DocumentVersionDocument.id == version_id,
+        DocumentVersionDocument.document_id == document_id,
+    )
+    if document is None or version is None:
+        raise HTTPException(status_code=404, detail="NOT_FOUND")
+    DocumentService._authorize(document, actor)
+    job = await DriveArchiveJobDocument.find_one(
+        DriveArchiveJobDocument.version_id == version_id
+    )
+    if job is None:
+        raise HTTPException(status_code=409, detail="CONFLICT")
+    job = await DriveArchiveJobRepository().request_retry(
+        job, actor.id, payload.topic_category, payload.confirm_miscellaneous
+    )
+    return ArchiveRetryResponse(job_id=job.id, status=job.status, updated_at=job.updated_at)
