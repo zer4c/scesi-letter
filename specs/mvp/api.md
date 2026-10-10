@@ -49,6 +49,7 @@ payload returns the original result; same key with a different payload returns
 | POST /signature/authorizations | password, document_id, source_hash, version_id | one-use 60-second token; owner only |
 | GET /template | none | single current template with public settings |
 | PATCH /template | settings, expected_revision | new immutable template revision; admin |
+| POST /documents/preview | Markdown source | transient unsigned PDF; authenticated, no persistence or signature |
 | GET /contacts | q?, role?, institution?, career?, include_inactive?, pagination | authenticated shared directory; exact role/career/institution filters precede text matching |
 | POST /contacts | typed contact | create validated contact |
 | PATCH /contacts/{id} | fields, expected_revision | quick edit/deactivate; conflict-safe; no hard-delete endpoint |
@@ -82,6 +83,13 @@ payload returns the original result; same key with a different payload returns
 There is no document-delete route, generic signature decrypt route, or generic
 arbitrary webhook-execution route. The old demonstration `/automations/{id}/run`
 cannot return fictitious success once the MVP automation module replaces it.
+
+The preview source is UTF-8 Markdown with a YAML front matter object containing
+`document_type` and ISO `date`, with optional identifier, reference, salutation,
+sender/recipient snapshots, topic, signoff, and template revision. Supported
+body syntax includes headings, paragraphs, emphasis, `++underline++`, lists,
+tables, fenced code, `::: center` blocks, and `\pagebreak`. Raw HTML and embedded
+images are rejected; links render as labels only and never cause server fetches.
 
 ## Payload Details
 

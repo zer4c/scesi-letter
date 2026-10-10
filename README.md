@@ -43,6 +43,9 @@ typography, margins, and display text through `GET/PATCH /api/template`; each
 change creates a new immutable revision. Existing document versions keep their
 original template revision.
 
+Unsigned previews accept Markdown with safe YAML front matter at
+`POST /api/documents/preview`; they are generated in memory and are not stored.
+
 To run the Vite development server while the Compose backend/database are up:
 
 ```bash

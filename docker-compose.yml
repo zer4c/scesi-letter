@@ -52,7 +52,8 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
     environment:
       APP_ENV: ${APP_ENV:-development}
       APP_TIMEZONE: ${APP_TIMEZONE:-America/La_Paz}
@@ -90,6 +91,7 @@ services:
       LLM_MAX_ANALYSIS_TOKENS: ${LLM_MAX_ANALYSIS_TOKENS:-6000}
       LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-2}
       ARTIFACT_ROOT: /var/lib/scesi/artifacts
+      FONT_DIRECTORY: /app/resources/fonts
       TEMPLATE_FOOTER_PHONES: ${TEMPLATE_FOOTER_PHONES:-[]}
       TEMPLATE_FOOTER_URL: ${TEMPLATE_FOOTER_URL:-https://scesi.org}
       TEMPLATE_QR_URL: ${TEMPLATE_QR_URL:-https://scesi.org}

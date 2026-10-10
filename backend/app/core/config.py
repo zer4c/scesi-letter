@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     LLM_MAX_RETRIES: int = 2
 
     ARTIFACT_ROOT: Path = Path("/var/lib/scesi/artifacts")
+    FONT_DIRECTORY: Path = REPOSITORY_ROOT / "resources" / "fonts"
     TEMPLATE_FOOTER_PHONES: list[str] = Field(default_factory=list)
     TEMPLATE_FOOTER_URL: str = "https://scesi.org"
     TEMPLATE_QR_URL: str = "https://scesi.org"
