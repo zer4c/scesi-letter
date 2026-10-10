@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.core.config import get_settings
-from app.core.database import create_mongo_client
+from app.core.database import create_mongo_client, initialize_persistence
 
 
 @asynccontextmanager
@@ -14,6 +14,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.mongo_client = client
     app.state.database = client[settings.MONGODB_DATABASE]
     try:
+        await initialize_persistence(app.state.database)
         yield
     finally:
         await client.close()

@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "FastAPI API for SCESI automations"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "beanie>=2,<3",
     "fastapi>=0.115,<1.0",
     "pydantic-settings>=2.7,<3",
     "pymongo>=4.13,<5",
