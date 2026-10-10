@@ -45,7 +45,6 @@ examples. It is a confirmed rule, not a proposed default.
 |---|---|---|---|
 | P-01 | Verify account access/plan/quotas, resolve supplied rate-table plan-label conflict, check retention and live tool/schema behavior | Local graph, documented capabilities and numeric table, fake provider | Real provider readiness / certified Free entitlement |
 | P-02 | Obtain usable original PNG assets through normal attachments | Generic public-style fixture rendering | Exact approved template fidelity |
-| P-03 | Install/pin Impeccable skills and review generated product/design context | Supplied tutorial workflow is now documented | Claim of installed skills or finished UI quality gate |
 | P-04 | Configure Google OAuth project and two sender connections | Mocked adapters / errors | Real Drive/Gmail integration |
 | P-05 | Choose registered Google Contacts import versus extracting correspondents from Gmail | Manual contacts, role matching | Gmail mailbox contact extraction |
 
@@ -68,6 +67,14 @@ or use it as a fixed background. Store separately usable public logos in
 No personal signature asset is a permitted repository exception.
 
 ## Research Status
+
+T11 resolved the Impeccable setup prerequisite for Codex: version 4.5.2 is
+pinned by the official `vendor/impeccable` submodule and linked into the project
+skill directory. `PRODUCT.md` and the shipped-surface design record are present.
+The one required mechanical detector invocation could not launch its internal
+Chromium; the user accepted integrating T11 with that validation limitation
+recorded. The broader product visual direction remains open for the user's
+manual refinement.
 
 Attempts to fetch official Groq models, rate limits, tool-use documentation,
 Google OAuth/scope documentation, and Impeccable's tutorial on 2026-10-10

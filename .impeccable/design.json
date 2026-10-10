@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-10T10:48:05Z",
+  "title": "Design System: SCESI Letter",
+  "extensions": {
+    "colorMeta": {
+      "institutional": { "role": "primary", "displayName": "Institutional Red", "canonical": "#a40000" },
+      "institutional-dark": { "role": "primary", "displayName": "Deep Institutional Red", "canonical": "#7f0000" },
+      "ink": { "role": "neutral", "displayName": "Charcoal Violet", "canonical": "#25243a" },
+      "muted": { "role": "neutral", "displayName": "Muted Charcoal", "canonical": "#5d5b66" },
+      "paper": { "role": "neutral", "displayName": "White", "canonical": "#ffffff" },
+      "ground": { "role": "neutral", "displayName": "Warm Gray", "canonical": "#f2f0ed" },
+      "line": { "role": "neutral", "displayName": "Soft Gray Line", "canonical": "#dedbd7" },
+      "error": { "role": "tertiary", "displayName": "Error Red", "canonical": "#8e1f1f" },
+      "error-ground": { "role": "tertiary", "displayName": "Pale Error Ground", "canonical": "#fceeed" },
+      "info": { "role": "secondary", "displayName": "Information Blue", "canonical": "#244c62" },
+      "info-ground": { "role": "secondary", "displayName": "Pale Information Ground", "canonical": "#edf4f7" }
+    },
+    "typographyMeta": {
+      "body": { "displayName": "Body", "purpose": "Default text and everyday controls." },
+      "headline": { "displayName": "Access Display", "purpose": "Large identity statement in the access panel." },
+      "title": { "displayName": "Page Title", "purpose": "Access form heading." },
+      "label": { "displayName": "Form Label", "purpose": "Field labels and semibold control text." }
+    },
+    "shadows": [
+      { "name": "focus-ring", "value": "0 0 0 3px rgb(164 0 0 / 18%)", "purpose": "Text field focus treatment." }
+    ],
+    "motion": [
+      { "name": "control-transition", "value": "140ms ease-out", "purpose": "Button and field interaction states." },
+      { "name": "reduced-motion", "value": "0.01ms", "purpose": "Reduced-motion preference override." }
+    ],
+    "breakpoints": [
+      { "name": "navigation-reflow", "value": "900px" },
+      { "name": "mobile-stack", "value": "680px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main form action for sign-in and invitation acceptance.",
+      "html": "<button class=\"ds-button-primary\" type=\"button\">Ingresar</button>",
+      "css": ".ds-button-primary { min-height: 50px; padding: 12px 18px; border: 1px solid var(--color-institutional); border-radius: 7px; background: var(--color-institutional); color: #fff; cursor: pointer; font: 600 0.93rem/1.55 'Onest Variable', 'Segoe UI', sans-serif; transition: background 140ms ease-out, border-color 140ms ease-out, transform 140ms ease-out; } .ds-button-primary:hover { transform: translateY(-1px); border-color: var(--color-institutional-dark); background: var(--color-institutional-dark); } .ds-button-primary:active { transform: translateY(0); } .ds-button-primary:focus-visible { outline: 3px solid #6e0000; outline-offset: 3px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-text",
+      "description": "Labeled text entry for access forms.",
+      "html": "<label class=\"ds-field\">Correo electrónico<input class=\"ds-input\" type=\"email\" /></label>",
+      "css": ".ds-field { display: grid; gap: 8px; color: var(--color-ink); font: 600 0.93rem/1.55 'Onest Variable', 'Segoe UI', sans-serif; } .ds-input { width: 100%; min-height: 50px; padding: 11px 13px; border: 1px solid #8b8990; border-radius: 7px; background: #fff; color: var(--color-ink); font: 400 1rem/1.55 'Onest Variable', 'Segoe UI', sans-serif; transition: border-color 140ms ease-out, box-shadow 140ms ease-out; } .ds-input:hover { border-color: #5e5b64; } .ds-input:focus { border-color: var(--color-institutional); box-shadow: 0 0 0 3px rgb(164 0 0 / 18%); outline: none; } .ds-input:focus-visible { outline: 3px solid #6e0000; outline-offset: 3px; }"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Secondary shell action such as signing out or retrying.",
+      "html": "<button class=\"ds-button-quiet\" type=\"button\">Cerrar sesión</button>",
+      "css": ".ds-button-quiet { min-height: 42px; padding: 8px 12px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #720000; cursor: pointer; font: 650 0.9rem/1.4 'Onest Variable', 'Segoe UI', sans-serif; } .ds-button-quiet:hover { border-color: #d9b9b9; background: #fbf5f5; } .ds-button-quiet:focus-visible { outline: 3px solid #6e0000; outline-offset: 3px; }"
+    },
+    {
+      "name": "Primary Navigation",
+      "kind": "nav",
+      "refersTo": "",
+      "description": "Responsive workspace navigation with an explicit active marker.",
+      "html": "<nav class=\"ds-navigation\" aria-label=\"Navegación principal\"><a class=\"ds-nav-link is-active\" href=\"/documents\">Cartas</a></nav>",
+      "css": ".ds-navigation { display: flex; align-items: stretch; gap: 22px; } .ds-nav-link { position: relative; display: inline-flex; align-items: center; padding: 4px 2px; color: var(--color-muted); font: 600 0.94rem/1.4 'Onest Variable', 'Segoe UI', sans-serif; text-decoration: none; } .ds-nav-link:hover { color: var(--color-institutional); } .ds-nav-link.is-active { color: var(--color-ink); } .ds-nav-link.is-active::after { position: absolute; right: 0; bottom: -1px; left: 0; height: 3px; background: var(--color-institutional); content: ''; } .ds-nav-link:focus-visible { outline: 3px solid #6e0000; outline-offset: 3px; }"
+    },
+    {
+      "name": "Status Notice",
+      "kind": "custom",
+      "refersTo": "",
+      "description": "Compact error or information message in access and workspace flows.",
+      "html": "<p class=\"ds-notice ds-notice--info\" role=\"status\">Tu cuenta está lista. Inicia sesión para continuar.</p>",
+      "css": ".ds-notice { margin: 0 0 22px; padding: 12px 14px; border-radius: 7px; font: 400 0.92rem/1.5 'Onest Variable', 'Segoe UI', sans-serif; } .ds-notice--info { background: var(--color-info-ground); color: var(--color-info); } .ds-notice--error { background: var(--color-error-ground); color: var(--color-error); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Geometría institucional",
+    "overview": "The shipped access and navigation slice uses a clear institutional frame: a broad red identity field beside a quiet white form, followed after sign-in by a light workspace shell. Onest carries both prominent Spanish headings and everyday controls. The supplied SCESI and university marks remain the authority for institutional identity; the application adds only a small crossing-line pennant cue.\n\nThis record describes the implemented T11 access and navigation surface. The broader product design remains open for the user’s manual refinement; this document does not settle future editor, document, or organization surfaces.",
+    "keyCharacteristics": [
+      "Institutional red anchors identity, actions, and active navigation.",
+      "Warm gray grounds the workspace; white carries focused content.",
+      "Crisp geometry and restrained borders keep the interface direct."
+    ],
+    "rules": [
+      { "name": "The Identity Accent Rule", "body": "Reserve institutional red for identity, primary actions, and clear active or hover states; keep ordinary workspace surfaces neutral.", "section": "colors" },
+      { "name": "The Status Color Rule", "body": "Use the distinct error and information pairs for notices, not as general decoration.", "section": "colors" },
+      { "name": "The One-Family Rule", "body": "Use Onest Variable throughout this surface; rely on size, weight, and spacing for hierarchy.", "section": "typography" },
+      { "name": "The Flat Surface Rule", "body": "Use surface color and fine separators for structure; reserve the soft ring for an actively focused field.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use the institutional red token for primary actions and active navigation.",
+      "Do keep form surfaces white against the warm-gray workspace ground.",
+      "Do retain clear labels, visible keyboard focus, and the responsive stacking behavior.",
+      "Do use only approved SCESI and UMSS marks when an institutional mark is needed."
+    ],
+    "donts": [
+      "Don't recreate the academic PDF header in application chrome.",
+      "Don't add emoji or substitute glyph icons for the approved icon approach.",
+      "Don't treat the current access layout as a settled direction for the broader product; future visual refinement remains open."
+    ]
+  }
+}

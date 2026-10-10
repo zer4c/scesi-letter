@@ -132,8 +132,20 @@ failures to diagnose, not instructions to relax access/privacy restrictions.
 ## Impeccable Implementation Workflow
 
 The supplied tutorial requires Node.js 22.18 or later; repository Node 24 meets
-that baseline. No Impeccable installation has been performed in planning.
-At implementation time pin a reviewed version compatible with the coding tool.
+that baseline. During T11, `impeccable@4.5.2` was queried and the official
+installer was attempted with `pnpm dlx`; its style-site bundle returned HTTP
+403. The public GitHub source was then added as `vendor/impeccable`, pinned at
+commit `d631a8827f99414d2b6daba4ef08b7f8701751d7` (package version 4.5.2), and
+linked for Codex with the pinned CLI's `link --source=vendor/impeccable
+--providers=codex` command. The resulting project skill was read and its version
+verified. The optional design hook was declined.
+
+The mechanical detector was invoked once for T11 but its Chromium launch failed
+because of the environment's Crashpad/SUID sandbox configuration. No retry was
+made under the skill's one-run rule; an independent system-Chromium/Playwright
+visual and functional check was performed instead. The user accepted merging
+T11 with this validation limitation recorded. The broader visual direction is
+not finalized; the user intends to refine it manually.
 
 From the project root, use only pnpm. Future commands:
 
@@ -162,11 +174,10 @@ existing page. Use `/impeccable audit` before UI acceptance. A specification-onl
 stage can use `/impeccable shape` after installation; it must not trigger builds
 under the current planning-only instruction.
 
-The shared-version alternative is a future reviewed Git submodule at
-`vendor/impeccable` with `pnpm dlx "impeccable@<PINNED_VERSION>" link` and Codex
-provider configuration verified from that version's help. Do not copy a
-Claude/Cursor provider list for Codex. Preserve existing skill directories;
-do not use `--force` to overwrite them. Submodules/hooks are not required now.
+For later updates, review the chosen submodule revision, then use
+`pnpm dlx "impeccable@<PINNED_VERSION>" link --source=vendor/impeccable
+--providers=codex`. Do not copy a Claude/Cursor provider list for Codex.
+Preserve existing skill directories; do not use `--force` to overwrite them.
 Installing skills does not automatically install or authorize design hooks.
 
 Review actual task behavior on desktop and narrow screens, inspect code, and
