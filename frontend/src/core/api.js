@@ -183,11 +183,11 @@ export const checkpointDocument = (id, csrfToken) => request(`/api/documents/${i
   headers: { 'X-CSRF-Token': csrfToken },
 });
 
-export async function renderDocumentPreview(markdown) {
+export async function renderDocumentPreview(markdown, csrfToken) {
   const response = await fetch('/api/documents/preview', {
     method: 'POST',
     credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
     body: JSON.stringify({ markdown }),
   });
   if (!response.ok) {

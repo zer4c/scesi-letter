@@ -361,7 +361,7 @@ export default function DocumentEditorPage() {
     setPreviewError('');
     previewTimer.current = window.setTimeout(async () => {
       try {
-        const url = await renderDocumentPreview(buildMarkdown(fields, identifier, body));
+        const url = await renderDocumentPreview(buildMarkdown(fields, identifier, body), csrfToken);
         if (sequence !== previewSequence.current) {
           URL.revokeObjectURL(url);
           return;
@@ -378,7 +378,7 @@ export default function DocumentEditorPage() {
       }
     }, 650);
     return () => window.clearTimeout(previewTimer.current);
-  }, [synced, fields, body, identifier]);
+  }, [synced, fields, body, identifier, csrfToken]);
 
   useEffect(() => () => {
     window.clearTimeout(previewTimer.current);
