@@ -115,6 +115,30 @@ export const saveSignature = (password, envelope, csrfToken) => request('/api/si
   body: JSON.stringify({ password, envelope }),
 });
 
+export const createSigningAuthorization = (payload, csrfToken) => request('/api/signature/authorizations', {
+  method: 'POST',
+  headers: { 'X-CSRF-Token': csrfToken },
+  body: JSON.stringify(payload),
+});
+
+export async function signDocumentVersion(id, versionId, authorizationToken, signaturePng, csrfToken) {
+  const response = await fetch(`/api/documents/${id}/sign?version_id=${encodeURIComponent(versionId)}`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'image/png',
+      'X-CSRF-Token': csrfToken,
+      'X-Signing-Authorization': authorizationToken,
+    },
+    body: signaturePng,
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new ApiError(response.status, payload?.error?.code || payload?.detail);
+  }
+  return payload;
+}
+
 export const changePassword = (currentPassword, newPassword, expectedEnvelopeUpdatedAt, replacementEnvelope, csrfToken) => request(
   '/api/auth/password/change',
   {

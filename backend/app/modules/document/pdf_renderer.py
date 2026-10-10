@@ -19,6 +19,8 @@ MAX_PDF_PAGES = 50
 PAGE_BREAK = "\\pagebreak"
 CENTER_OPEN = "::: center"
 CENTER_CLOSE = ":::"
+PARAGRAPH_GAP_MM = 3
+LOGO_HEIGHT_MM = 16
 
 
 def _parse_underline(inline, match, state):
@@ -72,10 +74,12 @@ class LetterPDF(FPDF):
         self,
         settings: TemplateSettings,
         font_directory: Path,
+        image_directory: Path | None = None,
     ) -> None:
         super().__init__(orientation="P", unit="mm", format="Letter")
         self.template = settings
         self.font_directory = font_directory
+        self.image_directory = image_directory
         self._qr_png: bytes | None = None
         self.family = "LetterBody"
         self.set_margins(
@@ -119,7 +123,22 @@ class LetterPDF(FPDF):
             fname=str(self.font_directory / "LiberationSans-Regular.ttf"),
         )
 
+    def _draw_logo(self, filename: str, align_right: bool) -> None:
+        if self.image_directory is None:
+            return
+        path = self.image_directory / filename
+        if not path.is_file():
+            return
+        from PIL import Image
+
+        with Image.open(path) as image:
+            width = LOGO_HEIGHT_MM * image.width / image.height
+        x = self.w - 20 - width if align_right else 20
+        self.image(str(path), x=x, y=8, w=width, h=LOGO_HEIGHT_MM)
+
     def header(self) -> None:
+        self._draw_logo("umss-logo.png", align_right=False)
+        self._draw_logo("scesi-logo.png", align_right=True)
         self.set_y(7)
         self.set_text_color(75, 75, 75)
         self.set_font(self.family, size=15)
@@ -149,6 +168,7 @@ class LetterPDF(FPDF):
         self.set_line_width(0.25)
         self.line(20, 28, self.w - 20, 28)
         self.set_text_color(0, 0, 0)
+        self.set_y(max(self.t_margin, self.get_y()))
 
     def footer(self) -> None:
         height = min(self.template.margin_bottom_mm, 32)
@@ -214,7 +234,9 @@ class MarkdownPDFRenderer:
         created_at: datetime | None = None,
         signature_png: bytes | None = None,
     ) -> bytes:
-        pdf = LetterPDF(template, self._settings.FONT_DIRECTORY)
+        pdf = LetterPDF(
+            template, self._settings.FONT_DIRECTORY, self._settings.IMAGE_DIRECTORY
+        )
         if created_at is not None:
             pdf.set_creation_date(created_at)
         pdf.add_page()
@@ -453,7 +475,7 @@ class MarkdownPDFRenderer:
                 continue
             if kind in {"paragraph", "block_text"}:
                 pdf.set_font(pdf.family, size=pdf.template.body_font_size)
-                pdf.set_x(pdf.l_margin + (5 if node.get("type") == "block_text" else 0))
+                pdf.set_x(pdf.l_margin)
                 if centered:
                     pdf.multi_cell(
                         0, 6, _plain_text(children), align="C",
@@ -461,20 +483,34 @@ class MarkdownPDFRenderer:
                     )
                 else:
                     self._write_inline(pdf, children, centered=False)
-                pdf.ln(6)
+                    pdf.ln(6)
+                if kind == "paragraph":
+                    pdf.ln(PARAGRAPH_GAP_MM)
                 continue
             if kind == "list":
                 attrs = node.get("attrs") or {}
                 ordered = bool(attrs.get("ordered", False))
-                for index, item in enumerate(children, start=1):
+                pdf.set_font(pdf.family, size=pdf.template.body_font_size)
+                markers = [
+                    f"{index}. " if ordered else "• "
+                    for index in range(1, len(children) + 1)
+                ]
+                list_margin = pdf.l_margin
+                text_margin = list_margin + 5 + max(
+                    (pdf.get_string_width(marker) for marker in markers), default=0
+                )
+                for marker, item in zip(markers, children):
                     item_children = item.get("children", [])
                     if not isinstance(item_children, list):
                         continue
-                    pdf.set_x(pdf.l_margin + 5)
+                    pdf.set_x(list_margin + 5)
                     pdf.set_font(pdf.family, size=pdf.template.body_font_size)
-                    marker = f"{index}. " if ordered else "• "
                     pdf.write(6, marker)
+                    pdf.set_left_margin(text_margin)
+                    pdf.set_x(text_margin)
                     self._render_nodes(pdf, item_children, centered=centered)
+                    pdf.set_left_margin(list_margin)
+                    pdf.set_x(list_margin)
                 pdf.ln(2)
                 continue
             if kind == "block_code":

@@ -2,6 +2,7 @@ import asyncio
 from uuid import UUID
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from starlette.websockets import WebSocketState
 
 from app.core.config import get_settings
 from app.modules.auth.services import AuthService, CSRF_COOKIE
@@ -68,6 +69,8 @@ async def collaborate(websocket: WebSocket, document_id: UUID) -> None:
             await websocket.close(code=4429)
             return
         while True:
+            if websocket.application_state != WebSocketState.CONNECTED:
+                return
             try:
                 message = await asyncio.wait_for(
                     websocket.receive_bytes(), timeout=REAUTHENTICATE_SECONDS

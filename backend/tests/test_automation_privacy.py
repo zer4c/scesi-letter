@@ -11,6 +11,9 @@ from app.core.config import Settings
 from app.modules.automation.graph import (
     LetterAssistanceService,
     _execute_tools,
+    _locate_original,
+    _parse_suggestions,
+    _validate,
     build_graph,
 )
 from app.modules.automation.privacy import LocalPrivacyFilter
@@ -275,3 +278,66 @@ def test_unknown_tool_calls_are_rejected_without_dynamic_execution():
     tool_result = result["tool_messages"][0]
     assert tool_result["tool_call_id"] == "tool-injection-1"
     assert json.loads(tool_result["content"]) == {"error": "tool_not_allowed"}
+
+
+def test_suggestion_range_is_recovered_only_from_an_unambiguous_original():
+    text = "solisitamos una aula y solisitamos permiso para realisar"
+    unique = text.index("realisar")
+    second = text.index("solisitamos", 1)
+
+    assert _locate_original(text, "realisar", None, None) == (unique, len(text))
+    assert _locate_original(text, "realisar", 0, 3) == (unique, len(text))
+    assert _locate_original(text, "solisitamos", second, second + 11) == (second, second + 11)
+    assert _locate_original(text, "solisitamos", None, None) is None
+    assert _locate_original(text, "ausente", None, None) is None
+    assert _locate_original(text, "", 0, 0) is None
+
+
+def test_model_output_keeps_valid_suggestions_and_drops_malformed_ones():
+    content = json.dumps(
+        {
+            "suggestions": [
+                {"kind": "grammar", "original": "reunion", "replacement": "reunión",
+                 "field": "grammar", "start": 3, "end": 9, "reason": "Falta la tilde."},
+                {"kind": "grammar", "original": "aula", "replacement": "sala",
+                 "reason": "Es más preciso.", "confidence": 0.9},
+                {"kind": "topic", "field": "topic", "replacement": "Solicitud de aula",
+                 "reason": "Resume el pedido."},
+                "not an object",
+            ]
+        }
+    )
+
+    parsed = _parse_suggestions(content)
+
+    assert [(item["kind"], item["field"]) for item in parsed] == [
+        ("grammar", None),
+        ("topic", "topic"),
+    ]
+    for invalid in ("", "[]", '{"suggestions": "none"}'):
+        with pytest.raises(HTTPException) as raised:
+            _parse_suggestions(invalid)
+        assert raised.value.detail == "LLM_INVALID_RESPONSE"
+
+
+def test_private_reason_is_replaced_without_discarding_the_suggestion():
+    privacy = LocalPrivacyFilter()
+    redacted = privacy.redact("Solicitamos una aula para la reunion academica.", [])
+    state = {
+        "redacted": redacted,
+        "privacy": privacy,
+        "private_names": ["Juan Pérez"],
+        "requested_kinds": ["grammar"],
+        "role_counts": {},
+        "suggestions": [
+            {"kind": "grammar", "original": "reunion", "replacement": "reunión",
+             "field": None, "start": None, "end": None,
+             "reason": "Juan Pérez pidió corregir la tilde."},
+        ],
+    }
+
+    accepted = _validate(state)["suggestions"]
+
+    assert [(item["original"], item["replacement"]) for item in accepted] == [("reunion", "reunión")]
+    assert "Juan" not in accepted[0]["reason"]
+

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider.jsx';
 
@@ -81,7 +81,7 @@ function metadataForMap(fields) {
 }
 
 function buildMarkdown(fields, identifier, body) {
-  const metadata = { ...fields, ...(identifier ? { identifier } : {}) };
+  const metadata = { ...saveMetadata(fields), ...(identifier ? { identifier } : {}) };
   return `---\n${JSON.stringify(metadata, null, 2)}\n---\n\n${body}\n`;
 }
 
@@ -353,10 +353,23 @@ export default function DocumentEditorPage() {
     return () => { active = false; };
   }, [collab, synced]);
 
+  // The shared document owns the text once the editor is bound to it. Passing
+  // the React copy back as a controlled value reverts keystrokes that arrive
+  // while a render is pending, so only seed the editor when it is created.
+  const editorSeed = useMemo(
+    () => (collab && editorExtensions ? collab.body.toString() : ''),
+    [collab, editorExtensions],
+  );
+
   useEffect(() => {
     if (!synced || !fields) return undefined;
     const sequence = ++previewSequence.current;
     window.clearTimeout(previewTimer.current);
+    if (!body.trim()) {
+      setPreviewState('empty');
+      setPreviewError('');
+      return undefined;
+    }
     setPreviewState('rendering');
     setPreviewError('');
     previewTimer.current = window.setTimeout(async () => {
@@ -487,6 +500,10 @@ export default function DocumentEditorPage() {
             topic={fields?.topic || ''}
             recipientEmail={fields?.recipient?.email || ''}
             onFinalized={setFinalizedVersionId}
+            onSigned={(versionId) => {
+              setCurrentVersion(versionId);
+              setFinalizedVersionId(versionId);
+            }}
           />
           <button className="button-primary workspace-save" disabled={!synced || saveState === 'saving'} onClick={handleSave} type="button">
             Guardar
@@ -573,7 +590,7 @@ export default function DocumentEditorPage() {
                   editable={collabStatus !== 'unauthorized'}
                   height="480px"
                   onChange={handleBodyChange}
-                  value={body}
+                  value={editorSeed}
                   className="letter-code-editor"
                 />
               </Suspense>
@@ -592,6 +609,7 @@ export default function DocumentEditorPage() {
           {(previewState === 'loading' || previewState === 'rendering') && <p className="preview-message" role="status">{previewState === 'loading' ? 'Preparando el PDF…' : 'Actualizando la vista previa…'}</p>}
           {previewError && <p className="notice notice--error" role="alert">{previewError}</p>}
           {previewUrl && <Suspense fallback={<p className="preview-message" role="status">Preparando el visor PDF…</p>}><PdfPreview source={previewUrl} /></Suspense>}
+          {previewState === 'empty' && !previewUrl && <p className="preview-message">Escribe el contenido de la carta para ver la vista previa.</p>}
           {previewState === 'error' && !previewUrl && <p className="preview-message">La edición sigue disponible. Corrige el contenido para generar una vista previa.</p>}
         </section>
       </div>

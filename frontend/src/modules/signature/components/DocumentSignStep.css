@@ -1,0 +1,4 @@
+.sign-step__start { justify-self: start; }
+.sign-step__form { display: grid; gap: 12px; }
+.sign-step__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sign-step__error { margin: 0; }

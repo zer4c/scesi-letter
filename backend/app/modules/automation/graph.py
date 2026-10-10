@@ -33,7 +33,7 @@ from app.modules.automation.quota import (
 )
 from app.modules.automation.schemas import (
     ListDocumentTypesInput,
-    ModelOutput,
+    ModelSuggestionOutput,
     RedactionRange,
     RoleLookupInput,
     SuggestionKind,
@@ -44,6 +44,22 @@ from app.modules.document.documents import LetterDocument
 PROMPT_VERSION = "v1"
 PROMPT_PATH = Path(__file__).parent / "prompts" / "v1.md"
 MAX_TOOL_CALLS = 3
+MAX_SUGGESTIONS = 20
+BODY_KINDS = {"grammar", "style", "reference"}
+GENERIC_REASON = "Sugerencia de revisión."
+SYNTHESIS_INSTRUCTION = (
+    'Return only a JSON object {"suggestions": [...]} with at most 20 items. '
+    "Each item has exactly these keys and no others: "
+    '"kind": one of the requested suggestion kinds. '
+    '"original": for grammar, style, and reference, the exact substring of '
+    "redacted_letter_body to replace, copied character by character; otherwise null. "
+    '"replacement": the proposed text, document type code, topic, or role key. '
+    '"field": null for grammar, style, and reference; "document_type", "topic", '
+    'or "recipient_role" for the kind with the same name. '
+    '"start" and "end": null; the server locates original itself. '
+    '"reason": a brief Spanish explanation. '
+    "Do not request or invoke tools in this pass."
+)
 MAX_CONTACT_PRIVACY_RECORDS = 10_000
 ALLOWED_KINDS = {
     "grammar",
@@ -145,6 +161,50 @@ async def _privacy_material(
         ):
             role_counts[role_key] = role_counts.get(role_key, 0) + 1
     return redacted, role_counts, private_names
+
+
+def _is_failed_generation(error: APIStatusError) -> bool:
+    body = error.body
+    detail = body.get("error") if isinstance(body, dict) else None
+    return (
+        error.status_code == 400
+        and isinstance(detail, dict)
+        and "failed_generation" in detail
+    )
+
+
+def _parse_suggestions(content: str | None) -> list[dict[str, Any]]:
+    try:
+        data = json.loads(content or "")
+    except json.JSONDecodeError as error:
+        raise HTTPException(status_code=502, detail="LLM_INVALID_RESPONSE") from error
+    items = data.get("suggestions") if isinstance(data, dict) else None
+    if not isinstance(items, list) or len(items) > MAX_SUGGESTIONS:
+        raise HTTPException(status_code=502, detail="LLM_INVALID_RESPONSE")
+    suggestions = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        if item.get("kind") in BODY_KINDS:
+            item = {**item, "field": None}
+        try:
+            suggestions.append(ModelSuggestionOutput.model_validate(item).model_dump())
+        except ValidationError:
+            continue
+    return suggestions
+
+
+def _locate_original(
+    text: str, original: object, start: object, end: object
+) -> tuple[int, int] | None:
+    if not isinstance(original, str) or not original:
+        return None
+    if isinstance(start, int) and isinstance(end, int) and text[start:end] == original:
+        return start, end
+    first = text.find(original)
+    if first < 0 or text.find(original, first + 1) >= 0:
+        return None
+    return first, first + len(original)
 
 
 async def _prepare(state: AnalysisState) -> dict[str, Any]:
@@ -265,8 +325,8 @@ async def _call_provider(
                 ) from error
             if (
                 error.status_code >= 500
-                and state["retry_budget"][0] < settings.LLM_MAX_RETRIES
-            ):
+                or _is_failed_generation(error)
+            ) and state["retry_budget"][0] < settings.LLM_MAX_RETRIES:
                 state["retry_budget"][0] += 1
                 await asyncio.sleep(min(2 ** state["retry_budget"][0], 2))
                 continue
@@ -381,20 +441,10 @@ async def _execute_tools(state: AnalysisState) -> dict[str, Any]:
 async def _synthesize(state: AnalysisState) -> dict[str, Any]:
     messages = [
         *state["messages"],
-        {
-            "role": "system",
-            "content": (
-                'Return only a JSON object matching {"suggestions": [...]}. '
-                "Do not request or invoke tools in this pass."
-            ),
-        },
+        {"role": "system", "content": SYNTHESIS_INSTRUCTION},
     ]
     completion = await _call_provider(state | {"messages": messages}, json_output=True)
-    try:
-        output = ModelOutput.model_validate_json(completion.content or "")
-    except (ValidationError, ValueError) as error:
-        raise HTTPException(status_code=502, detail="LLM_INVALID_RESPONSE") from error
-    return {"suggestions": [item.model_dump() for item in output.suggestions]}
+    return {"suggestions": _parse_suggestions(completion.content)}
 
 
 def _validate(state: AnalysisState) -> dict[str, Any]:
@@ -408,13 +458,15 @@ def _validate(state: AnalysisState) -> dict[str, Any]:
         reason = item.get("reason", "")
         replacement = item.get("replacement")
         if not privacy.validate_public_text(reason, state["private_names"]):
-            continue
-        if kind in {"grammar", "style", "reference"}:
-            start, end = item.get("start"), item.get("end")
-            if not isinstance(start, int) or not isinstance(end, int):
+            reason = GENERIC_REASON
+        if kind in BODY_KINDS:
+            located = _locate_original(
+                redacted.text, item.get("original"), item.get("start"), item.get("end")
+            )
+            if located is None:
                 continue
-            mapped = redacted.map_range(start, end)
-            if mapped is None or item.get("original") != redacted.text[start:end]:
+            mapped = redacted.map_range(*located)
+            if mapped is None:
                 continue
             if not isinstance(replacement, str) or not privacy.validate_public_text(
                 replacement, state["private_names"]

@@ -10,6 +10,7 @@ import {
   sendDocumentMail,
   syncArchivedVersion,
 } from '../../../core/api.js';
+import DocumentSignStep from '../../signature/components/DocumentSignStep.jsx';
 import './DocumentMailPanel.css';
 
 const archiveLabels = {
@@ -65,6 +66,7 @@ export default function DocumentMailPanel({
   topic,
   recipientEmail,
   onFinalized,
+  onSigned,
 }) {
   const dialogRef = useRef(null);
   const pendingDispatch = useRef(null);
@@ -82,6 +84,7 @@ export default function DocumentMailPanel({
   const [error, setError] = useState('');
   const [archiveCategory, setArchiveCategory] = useState('');
   const [confirmFinalize, setConfirmFinalize] = useState(false);
+  const [signedNotice, setSignedNotice] = useState('');
   const [to, setTo] = useState(recipientEmail || '');
   const [cc, setCc] = useState('');
   const [bcc, setBcc] = useState('');
@@ -209,6 +212,11 @@ export default function DocumentMailPanel({
     }
   };
 
+  const handleSigned = (signed) => {
+    setSignedNotice(`Carta firmada. Se creó la versión ${signed.version_number}, ya finalizada.`);
+    onSigned(signed.version_id);
+  };
+
   const handleArchiveRetry = async () => {
     setBusy(true);
     setError('');
@@ -278,6 +286,7 @@ export default function DocumentMailPanel({
 
   const openDialog = () => {
     setConfirmed(false);
+    setSignedNotice('');
     setOpen(true);
   };
 
@@ -340,6 +349,13 @@ export default function DocumentMailPanel({
                 )}
               </section>
             )}
+            {version && !version.finalized_at && !version.signature_owner_id && version.pdf_hash
+              && version.status === 'ready' && selectedVersionId === currentVersionId && (
+              <section className="mail-panel__step">
+                <DocumentSignStep disabled={busy} documentId={documentId} onSigned={handleSigned} version={version} />
+              </section>
+            )}
+            {signedNotice && <p className="mail-panel__status" role="status">{signedNotice}</p>}
             {selectedVersionIsFinal && version?.status !== 'archived' && (
               <section className="mail-panel__step">
                 <h3>Archivo en Drive</h3>

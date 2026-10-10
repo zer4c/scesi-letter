@@ -131,6 +131,11 @@ services:
       MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME:?Set MONGO_ROOT_USERNAME in .env}:${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in .env}@mongodb:27017/?replicaSet=rs0&authSource=admin
       MONGODB_DATABASE: ${MONGODB_DATABASE:-scesi_automation}
       MONGODB_REPLICA_SET: rs0
+      INTEGRATION_ENCRYPTION_KEY: ${INTEGRATION_ENCRYPTION_KEY:-}
+      INTEGRATION_KEY_ID: ${INTEGRATION_KEY_ID:-local-v1}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:8080/api/integrations/google/callback}
       ARTIFACT_ROOT: /var/lib/scesi/artifacts
       FONT_DIRECTORY: /app/resources/fonts
     depends_on:
