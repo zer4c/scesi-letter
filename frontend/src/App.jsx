@@ -8,6 +8,7 @@ import OrganizationAccessPage from './modules/auth/OrganizationAccessPage.jsx';
 import { AdminRoute, ProtectedRoute } from './modules/auth/ProtectedRoute.jsx';
 import ApplicationShell from './modules/layout/ApplicationShell.jsx';
 import DocumentListPage from './modules/document/DocumentListPage.jsx';
+import SignatureSettingsPage from './modules/signature/SignatureSettingsPage.jsx';
 
 const DocumentEditorPage = lazy(() => import('./modules/document/DocumentEditorPage.jsx'));
 
@@ -32,6 +33,7 @@ function App() {
             <Route index element={<Navigate to="/documents" replace />} />
             <Route path="/documents" element={<DocumentListPage />} />
             <Route path="/documents/:documentId" element={<Suspense fallback={<p className="screen-status" role="status">Preparando el editor…</p>}><DocumentEditorPage /></Suspense>} />
+            <Route path="/settings/signature" element={<SignatureSettingsPage />} />
             <Route element={<AdminRoute />}>
               <Route path="/settings/organization" element={<OrganizationAccessPage />} />
             </Route>

@@ -30,6 +30,9 @@ export default function ApplicationShell() {
           <NavLink className={({ isActive }) => `primary-navigation__link${isActive ? ' is-active' : ''}`} to="/documents">
             Cartas
           </NavLink>
+          <NavLink className={({ isActive }) => `primary-navigation__link${isActive ? ' is-active' : ''}`} to="/settings/signature">
+            Mi firma
+          </NavLink>
         </nav>
         <div className="account-controls">
           <div className="account-controls__identity">

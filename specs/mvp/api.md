@@ -43,7 +43,8 @@ payload returns the original result; same key with a different payload returns
 | POST /auth/password/change | current_password, new_password, replacement_envelope? | atomic password/envelope handling |
 | POST /auth/password/reset-invitations | user_id | recovery invitation; admin; no signature recovery |
 | GET /signature | none | own encrypted envelope only |
-| PUT /signature | typed envelope v1 | own upload/replacement after reauthentication |
+| PUT /signature | password, typed envelope v1 | own upload/replacement after reauthentication |
+| POST /auth/password/change | current_password, new_password, expected_envelope_updated_at, replacement_envelope? | compare-and-swap the signature envelope; re-wrap locally; returns envelope_updated_at; replacement required when one exists |
 | POST /signature/authorizations | password, document_id, source_hash, version_id | one-use 60-second token; owner only |
 | GET /template | none | single current template with public settings |
 | PATCH /template | settings, expected_revision | new immutable template revision; admin |
@@ -97,6 +98,11 @@ is applied to the live room or broadcast as its durable acknowledgement.
 There is no document-delete route, generic signature decrypt route, or generic
 arbitrary webhook-execution route. The old demonstration `/automations/{id}/run`
 cannot return fictitious success once the MVP automation module replaces it.
+
+Signature envelope fields use fixed protocol-v1 Argon2id parameters (64 MiB,
+three iterations, one lane), AES-256-GCM, canonical Base64, 16-byte salts, and
+independent 12-byte nonces. The API derives the owner ID from the session and
+never accepts a target user ID for signature access.
 
 The preview source is UTF-8 Markdown with a YAML front matter object containing
 `document_type` and ISO `date`, with optional identifier, reference, salutation,

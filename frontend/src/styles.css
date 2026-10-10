@@ -143,6 +143,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .button-primary:hover:not(:disabled) { transform: translateY(-1px); border-color: var(--color-institutional-dark); background: var(--color-institutional-dark); }
 .button-primary:active:not(:disabled) { transform: translateY(0); }
 .button-primary:disabled { cursor: wait; opacity: .7; }
+.button-secondary { min-height: 44px; padding: 9px 13px; border: 1px solid var(--color-institutional-dark); border-radius: var(--radius-control); background: #fff; color: var(--color-institutional-dark); cursor: pointer; font-size: .9rem; font-weight: 650; }
+.button-secondary:hover:not(:disabled) { background: #fbf5f3; }
+.button-secondary:disabled { cursor: wait; opacity: .7; }
 
 .access-panel__help { margin: 24px 0 0; color: var(--color-muted); font-size: .88rem; }
 .access-panel__help + .access-panel__help { margin-top: 10px; }
@@ -152,6 +155,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .notice { margin: 0 0 22px; padding: 12px 14px; border-radius: var(--radius-control); font-size: .92rem; }
 .notice--error { background: var(--color-error-ground); color: var(--color-error); }
 .notice--info { background: var(--color-info-ground); color: var(--color-info); }
+.notice--success { background: #edf6ef; color: #205b3f; }
 .error-state { display: grid; justify-items: start; gap: 0; }
 
 .screen-status { margin: 0; padding: 48px 24px; color: var(--color-muted); text-align: center; }
@@ -265,6 +269,33 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .workspace-tabs { display: none; }
 .editor-load-error { display: grid; justify-items: start; gap: 4px; }
 
+.signature-page { width: min(100%, 760px); margin-inline: auto; }
+.signature-page > h1 { margin: 6px 0 5px; font-size: clamp(2rem, 4vw, 2.8rem); letter-spacing: -.04em; line-height: 1.08; }
+.signature-page__intro { max-width: 65ch; margin: 0 0 26px; color: var(--color-muted); }
+.signature-status { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin: 18px 0 30px; padding: 0 0 18px; border-bottom: 1px solid var(--color-line); }
+.signature-status h2, .signature-warning h2 { margin: 0; font-size: 1.1rem; letter-spacing: -.015em; }
+.signature-status p, .signature-warning p { margin: 0; color: var(--color-muted); font-size: .92rem; }
+.signature-status > div:first-child { display: grid; gap: 3px; }
+.signature-card__actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.signature-preview { max-width: min(100%, 320px); max-height: 180px; object-fit: contain; border: 1px solid var(--color-line); background: #fff; }
+.signature-unlock { display: grid; min-width: min(100%, 280px); gap: 7px; }
+.signature-unlock label { font-size: .84rem; font-weight: 650; }
+.signature-unlock input { min-height: 44px; padding: 9px 11px; border: 1px solid #8b8990; border-radius: var(--radius-control); background: #fff; color: var(--color-ink); }
+.signature-unlock .button-primary { min-height: 44px; padding: 9px 13px; }
+.signature-form { max-width: 620px; gap: 11px; margin: 0 0 34px; padding: 0 0 28px; border-bottom: 1px solid var(--color-line); }
+.signature-form h2 { margin: 0 0 2px; font-size: 1.2rem; letter-spacing: -.02em; }
+.signature-form p { max-width: 70ch; margin: 0 0 4px; color: var(--color-muted); font-size: .92rem; }
+.signature-form label { margin-top: 4px; font-size: .9rem; font-weight: 650; }
+.signature-form__field-label { margin: 4px 0 -6px; font-size: .9rem; font-weight: 650; }
+.signature-form input:not([type="file"]) { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #8b8990; border-radius: var(--radius-control); background: #fff; color: var(--color-ink); }
+.signature-file-picker { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; }
+.signature-file-picker__input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
+.signature-file-picker > span { color: var(--color-muted); font-size: .88rem; overflow-wrap: anywhere; }
+.signature-form .button-primary { justify-self: start; min-height: 44px; margin-top: 6px; }
+.signature-warning { margin: 24px 0; padding: 17px 0; border-top: 1px solid #8d5700; border-bottom: 1px solid #8d5700; }
+.signature-warning h2 { margin-bottom: 6px; }
+.signature-warning p { color: #514528; }
+
 @media (max-width: 900px) {
   .workspace-columns { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .workspace-tabs { display: flex; gap: 18px; margin-bottom: 14px; border-bottom: 1px solid var(--color-line); }
@@ -273,6 +304,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .workspace-editor.is-mobile-hidden, .workspace-preview.is-mobile-hidden { display: none; }
   .workspace-preview { position: static; }
   .pdf-preview { max-height: 72vh; }
+  .signature-status { align-items: flex-start; flex-direction: column; }
+  .signature-card__actions { align-items: flex-start; flex-direction: column; }
+  .signature-unlock { width: 100%; }
 }
 
 .app-footer { display: flex; justify-content: space-between; gap: 20px; padding: 18px clamp(24px, 5vw, 72px); border-top: 1px solid var(--color-line); color: var(--color-muted); font-size: .8rem; }

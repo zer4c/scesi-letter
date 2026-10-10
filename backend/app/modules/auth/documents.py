@@ -19,6 +19,7 @@ class UserDocument(StrictDocument):
     role: Literal["admin", "user"] = "user"
     active: bool = True
     revision: int = Field(default=1, ge=1)
+    credential_revision: int = Field(default=1, ge=1)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
@@ -119,6 +120,32 @@ class LoginAttemptDocument(StrictDocument):
                 expireAfterSeconds=0,
                 name="ttl_login_attempt_expiry",
             ),
+        ]
+
+
+class SignatureEnvelopeDocument(StrictDocument):
+    user_id: UUID
+    envelope_version: int = Field(ge=1, le=1)
+    kdf: str = Field(pattern="^argon2id$")
+    memory_kib: int = Field(ge=65536, le=65536)
+    iterations: int = Field(ge=3, le=3)
+    parallelism: int = Field(ge=1, le=1)
+    salt: str = Field(min_length=24, max_length=24)
+    wrapped_dek: str = Field(min_length=64, max_length=64)
+    wrapping_iv: str = Field(min_length=16, max_length=16)
+    ciphertext: str = Field(min_length=24, max_length=2796204)
+    image_iv: str = Field(min_length=16, max_length=16)
+    mime: str = Field(pattern="^image/png$")
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    class Settings:
+        name = "signature_envelopes"
+        indexes = [
+            IndexModel(
+                [("user_id", ASCENDING)],
+                unique=True,
+                name="uq_signature_envelope_owner",
+            )
         ]
 
 

@@ -17,6 +17,7 @@ from app.modules.auth.documents import (
     LoginAttemptDocument,
     SchemaMigrationDocument,
     SessionDocument,
+    SignatureEnvelopeDocument,
     UserDocument,
 )
 from app.modules.contact.documents import ContactDocument
@@ -34,7 +35,7 @@ from app.modules.event.documents import EventDocument
 from app.modules.template.documents import TemplateDocument
 
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 8
 
 
 def create_mongo_client(settings: Settings) -> AsyncMongoClient:
@@ -96,6 +97,7 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
             InvitationDocument,
             LoginAttemptDocument,
             SessionDocument,
+            SignatureEnvelopeDocument,
             SchemaMigrationDocument,
             EventDocument,
         ],
@@ -112,6 +114,8 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
         4: "document_versioned_source",
         5: "durable_collaboration_state",
         6: "academic_events",
+        7: "owner_signature_envelopes",
+        8: "user_credential_revisions",
     }
     migration_collection = SchemaMigrationDocument.get_pymongo_collection()
     for version, name in migrations.items():
@@ -128,6 +132,11 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
             )
         except DuplicateKeyError:
             pass
+
+    await UserDocument.get_pymongo_collection().update_many(
+        {"credential_revision": {"$exists": False}},
+        {"$set": {"credential_revision": 1}},
+    )
 
     from app.core.config import get_settings
     from app.modules.template.services import TemplateService

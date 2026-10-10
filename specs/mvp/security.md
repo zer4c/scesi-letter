@@ -58,6 +58,28 @@ as an encryption key, or encrypt with a server-global signature key. Validate
 KDF bounds on receipt to prevent resource exhaustion. Library interoperability,
 wrong-password failure, AAD tampering, and nonce generation are release gates.
 
+Protocol-v1 implementation uses the maintained `hash-wasm` Argon2id library in
+a dedicated browser worker and Web Crypto AES-GCM. It fixes the KDF parameters
+above, requires distinct 12-byte nonces, binds the owner UUID/version/algorithm/
+purpose as AAD, and rejects non-PNG, animated, over-2-MiB, or over-4-megapixel
+inputs. PNG data is decoded and redrawn locally to remove metadata before
+encryption. The worker is terminated after each operation; explicit buffer
+clearing is best effort and does not promise forensic erasure.
+
+Initial browser measurement (2026-10-10): headless Chromium 151.0.7922.173 on
+the development Linux environment completed a synthetic 2x2 PNG normalize,
+Argon2id+AES-GCM encrypt, and mocked upload in 862 ms; decrypt plus temporary
+preview creation took 915 ms. Each Argon2id derivation allocates 64 MiB. These
+are single end-to-end desktop-environment observations, not device-class
+percentiles. Real mobile hardware and Safari/Firefox remain unverified; do not
+claim them as supported until the browser round-trip is run there. The bounded
+input and fixed KDF values are enforced before expensive derivation.
+
+Envelope upload and password change use a credential-revision compare-and-swap;
+password change also compares the expected envelope timestamp in the same
+MongoDB transaction. A stale tab cannot replace a newer envelope or change the
+password while re-wrapping an outdated copy.
+
 **SEC-006** Each signing operation requires the owner to enter their password
 again. Do not cache an unlocked signature across operations. Reauthenticate the
 session and issue a single-use authorization bound to user, document, exact

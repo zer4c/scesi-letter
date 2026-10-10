@@ -13,11 +13,11 @@ others, invitation hashes, or storage filesystem paths in general API responses.
 
 | Collection | Required fields | Indexes / constraints |
 |---|---|---|
-| users | id, normalized_email, display_name, password_hash, role, active, revision, created_at | Unique normalized email; unique partial index on role `admin` |
+| users | id, normalized_email, display_name, password_hash, role, active, revision, credential_revision, created_at | Unique normalized email; unique partial index on role `admin`; credential revision compare-and-swap for signature/password writes |
 | invitations | id, token_hash, intended_email, expires_at, redeemed_at, created_by | Unique token hash; one-time redemption in transaction |
 | sessions | id, token_hash, user_id, csrf_token_hash, expires_at, idle_expires_at, last_seen_at, revoked_at | Unique token hash; TTL indexes on absolute and idle expiry; authorization checks both directly |
 | login_attempts | key_hash, window_start, failures, expires_at | Unique (key_hash, window_start); TTL cleanup; `key_hash` is an HMAC pseudonym, never a raw email or IP |
-| signature_envelopes | user_id, envelope_version, kdf, salt, wrapped_dek, wrapping_iv, ciphertext, image_iv, mime, updated_at | Unique user_id; all encryption values validated against permitted algorithm/bounds |
+| signature_envelopes | user_id, envelope_version, kdf, memory_kib, iterations, parallelism, salt, wrapped_dek, wrapping_iv, ciphertext, image_iv, mime, updated_at | Unique user_id; protocol-v1 bounds, canonical Base64, distinct nonces, and ciphertext size validated |
 | signing_authorizations | token_hash, user_id, document_id, version_id, source_hash, expires_at, consumed_at? | Unique token hash; consume once atomically; 60-second expiry checked directly; TTL removes expired security state |
 | templates | template_id, revision, active, settings, created_by, created_at | Unique (template_id, revision); unique active revision per template ID; immutable revisions |
 | contacts | id, name, role_key, role_label, institution, career, emails, active, revision, created_by | Compound role/institution/career index; unique partial multikey normalized-email index |

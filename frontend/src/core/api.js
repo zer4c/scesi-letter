@@ -59,6 +59,28 @@ export const listDocuments = () => request('/api/documents?page=1&page_size=25')
 export const listEvents = (year) => request(`/api/events?year=${encodeURIComponent(year)}`);
 export const getEvent = (id) => request(`/api/events/${id}`);
 
+export const getSignature = () => request('/api/signature');
+
+export const saveSignature = (password, envelope, csrfToken) => request('/api/signature', {
+  method: 'PUT',
+  headers: { 'X-CSRF-Token': csrfToken },
+  body: JSON.stringify({ password, envelope }),
+});
+
+export const changePassword = (currentPassword, newPassword, expectedEnvelopeUpdatedAt, replacementEnvelope, csrfToken) => request(
+  '/api/auth/password/change',
+  {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': csrfToken },
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+      expected_envelope_updated_at: expectedEnvelopeUpdatedAt,
+      replacement_envelope: replacementEnvelope,
+    }),
+  },
+);
+
 export const createEvent = (payload, csrfToken) => request('/api/events', {
   method: 'POST',
   headers: { 'X-CSRF-Token': csrfToken },
