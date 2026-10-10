@@ -20,7 +20,7 @@ others, invitation hashes, or storage filesystem paths in general API responses.
 | signature_envelopes | user_id, envelope_version, kdf, salt, wrapped_dek, wrapping_iv, ciphertext, image_iv, mime, updated_at | Unique user_id; all encryption values validated against permitted algorithm/bounds |
 | signing_authorizations | token_hash, user_id, document_id, version_id, source_hash, expires_at, consumed_at? | Unique token hash; consume once atomically; 60-second expiry checked directly; TTL removes expired security state |
 | templates | id, revision, active, public_asset_ids, header, footer, typography, margins, created_at | Unique (id, revision); exactly one selected template ID |
-| contacts | id, name, role_key, role_label, institution, career, emails, active, revision, created_by | Index role_key/institution/career; unique normalized email where present |
+| contacts | id, name, role_key, role_label, institution, career, emails, active, revision, created_by | Compound role/institution/career index; unique partial multikey normalized-email index |
 | events | id, slug, name, year, created_by | Unique (year, slug); slug immutable |
 | documents | id, owner_id, participant_ids, identifier?, type, identifier_year?, current_version?, draft_revision, created_at | Unique identifier when set; owner/participants indexes |
 | document_states | document_id, crdt_snapshot, state_vector, server_revision, checkpoint_hash | Unique document_id |

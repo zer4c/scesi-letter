@@ -49,9 +49,9 @@ payload returns the original result; same key with a different payload returns
 | POST /signature/authorizations | password, document_id, source_hash, version_id | one-use 60-second token; owner only |
 | GET /template | none | single current template with public settings |
 | PATCH /template | settings, expected_revision | new immutable template revision; admin |
-| GET /contacts | q?, role?, institution?, career?, pagination | shared directory |
+| GET /contacts | q?, role?, institution?, career?, include_inactive?, pagination | authenticated shared directory; exact role/career/institution filters precede text matching |
 | POST /contacts | typed contact | create validated contact |
-| PATCH /contacts/{id} | fields, expected_revision | quick edit; conflict-safe |
+| PATCH /contacts/{id} | fields, expected_revision | quick edit/deactivate; conflict-safe; no hard-delete endpoint |
 | POST /contacts/import | connection_id | approved Google Contacts import job; P-05 |
 | GET /events | year?, pagination | event IDs and display names |
 | POST /events | name, year | sanitized immutable slug |

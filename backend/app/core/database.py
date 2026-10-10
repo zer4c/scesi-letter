@@ -18,6 +18,7 @@ from app.modules.auth.documents import (
     SessionDocument,
     UserDocument,
 )
+from app.modules.contact.documents import ContactDocument
 
 
 SCHEMA_VERSION = 2
@@ -70,6 +71,7 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
         database=database,
         document_models=[
             UserDocument,
+            ContactDocument,
             InvitationDocument,
             LoginAttemptDocument,
             SessionDocument,

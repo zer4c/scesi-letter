@@ -119,6 +119,7 @@ directory. Completing a new recipient offers an inline Save contact action;
 do not save incomplete or AI-generated suggestions automatically. Matching is
 first structured by role/career/institution, then text, then semantic ranking
 if needed. A match requires user confirmation. Handle name/email duplicates.
+Contacts use revision-safe edits and can be deactivated, never hard-deleted.
 
 ## Storage and Delivery
 
