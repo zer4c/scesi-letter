@@ -119,18 +119,3 @@ export async function renderDocumentPreview(markdown) {
   }
   return URL.createObjectURL(await response.blob());
 }
-
-export function listAutomations() {
-  return request('/api/automations');
-}
-
-export function createAutomation(payload) {
-  return request('/api/automations', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-}
-
-export function runAutomation(id) {
-  return request(`/api/automations/${id}/run`, { method: 'POST' });
-}

@@ -8,7 +8,6 @@ from urllib.parse import urlsplit
 from pydantic import Field, SecretStr, ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -27,6 +26,9 @@ class Settings(BaseSettings):
     COOKIE_SECURE: bool = False
     APP_RATE_LIMIT_KEY: SecretStr = SecretStr(
         "development-only-rate-limit-key-change-before-use"
+    )
+    AI_PREVIEW_SIGNING_KEY: SecretStr = SecretStr(
+        "development-only-preview-signing-key-change-before-use-000000000000"
     )
     ALLOWED_ORIGINS: str = "http://localhost:8080,http://localhost:5173"
 
@@ -47,7 +49,6 @@ class Settings(BaseSettings):
     GROQ_API_KEY: SecretStr | None = None
     GROQ_MODEL: str = "openai/gpt-oss-20b"
     GROQ_REASONING_EFFORT: Literal["low", "medium", "high"] = "low"
-    GROQ_INCLUDE_REASONING: bool = False
     GROQ_LIMIT_RPM: int = 30
     GROQ_LIMIT_RPD: int = 1000
     GROQ_LIMIT_TPM: int = 8000
@@ -114,6 +115,13 @@ class Settings(BaseSettings):
         ):
             raise ValueError("INTEGRATION_KEY_ID must be a non-empty identifier")
         return normalized
+
+    @field_validator("GROQ_MODEL")
+    @classmethod
+    def validate_groq_model(cls, value: str) -> str:
+        if value not in {"openai/gpt-oss-20b", "openai/gpt-oss-120b"}:
+            raise ValueError("GROQ_MODEL must be an explicitly supported GPT-OSS model")
+        return value
 
     @field_validator("GOOGLE_REDIRECT_URI")
     @classmethod
@@ -196,8 +204,12 @@ class Settings(BaseSettings):
             self.APP_RATE_LIMIT_KEY.get_secret_value()
         ) < 64:
             raise ValueError("APP_RATE_LIMIT_KEY must contain at least 64 characters")
-        if self.LLM_MAX_PASSES <= 0 or self.LLM_MAX_RETRIES < 0:
-            raise ValueError("LLM pass and retry limits are invalid")
+        if self.APP_ENV == "production" and len(
+            self.AI_PREVIEW_SIGNING_KEY.get_secret_value()
+        ) < 64:
+            raise ValueError("AI_PREVIEW_SIGNING_KEY must contain at least 64 characters")
+        if self.LLM_MAX_PASSES != 2 or self.LLM_MAX_RETRIES not in {0, 1, 2}:
+            raise ValueError("LLM pass and retry limits exceed the safe workflow bounds")
         if min(
             self.LLM_MAX_INPUT_TOKENS,
             self.LLM_MAX_OUTPUT_TOKENS,
@@ -205,6 +217,10 @@ class Settings(BaseSettings):
             self.LLM_REQUEST_TIMEOUT_SECONDS,
         ) <= 0:
             raise ValueError("LLM token and timeout limits must be positive")
+        if (self.LLM_MAX_INPUT_TOKENS > 2000 or self.LLM_MAX_OUTPUT_TOKENS > 750
+                or self.LLM_MAX_ANALYSIS_TOKENS > 6000
+                or self.LLM_REQUEST_TIMEOUT_SECONDS > 30):
+            raise ValueError("LLM budgets exceed the safe workflow bounds")
         return self
 
     @property

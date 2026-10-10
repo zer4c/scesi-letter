@@ -30,10 +30,10 @@ others, invitation hashes, or storage filesystem paths in general API responses.
 | archive_mappings | version_id, root_id, folder_ids, md_file_id?, pdf_file_id?, md_hash?, pdf_hash?, status | Unique version_id |
 | integration_connections | id, kind, owner_user_id?, mode, google_account, encrypted_tokens{key_id,nonce,ciphertext}, scopes, status, root_folder_id?, expires_at | Unique (kind, mode, owner_user_id); AES-GCM credentials bound to connection identity |
 | oauth_states | state_hash, user_id, kind, mode, scopes, encrypted_code_verifier, expires_at, used_at | Unique state hash; PKCE verifier encrypted; user-bound single use and direct expiry check |
-| suggestions | id, document_id, source_hash, kind, original?, replacement?, field?, start?, end?, reason, status, created_at | Scoped to document; explicit acceptance, no implicit edits |
+| letter_suggestions | id, document_id, source_hash, kind, original?, replacement?, field?, start?, end?, reason, status, created_at | Scoped to document; explicit acceptance, no implicit edits |
 | jobs | id, kind, version_id?, user_id?, connection_id?, idempotency_key, status, attempt, lease_until?, next_attempt_at?, error_code?, encrypted_payload? | Unique (user_id, kind, idempotency_key); index status/lease |
-| llm_quota_groups | group_key, configured_limits, observed_header_caps?, revision, updated_at | Unique group_key; serialized compare-and-swap/transaction updates for one organization's verified model quota pool |
-| llm_quota_reservations | id, group_key, analysis_id, attempt, reserved_input, reserved_output, reserved_at, status, actual_usage?, expires_at | Unique (analysis_id, attempt); group/time index; retain at least 24-hour accounting before TTL cleanup; no prompt/body/contact data |
+| llm_quota_gates | id, model, revision, provider remaining/reset headers | Unique model; transaction-serialized shared organization/model gate |
+| llm_quota_reservations | id, model, estimated/actual input/output tokens, status, created_at, settled_at | Rolling model/time index; uncertain reservations count estimates; settled events count actual usage; 48-hour TTL is cleanup only; no prompt/body/contact data |
 
 Do not implement signature-use audit history. Domain authorization and short-lived
 one-use signing challenges are required security state, not an audit feature.

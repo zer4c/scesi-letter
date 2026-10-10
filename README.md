@@ -46,6 +46,17 @@ the rate-limit key or signature password as this key. Gmail and Drive access
 remain unavailable until these settings and the approved Google APIs are
 configured; personal connection tokens are visible only to their owner.
 
+To enable letter-assistance previews, generate a separate
+`AI_PREVIEW_SIGNING_KEY` with `openssl rand -hex 32`. The Spanish spaCy NER model
+runs locally; the app displays its redacted body and requires confirmation before
+any provider call. To opt into Groq, create a key at
+`https://console.groq.com/keys`, set `GROQ_API_KEY`, and explicitly change
+`LLM_PROVIDER=disabled` to `LLM_PROVIDER=groq`. `openai/gpt-oss-20b` is the
+configured candidate, not a promise of free-plan access. Confirm the current
+account's model eligibility and limits at `https://console.groq.com/settings/limits`;
+the sample quota values in `.env.example` are provisional. No provider calls
+occur with the default disabled setting.
+
 The first backend start seeds one default template revision from `.env` footer
 settings. Administrators can change the phone list, footer URL, QR destination,
 typography, margins, and display text through `GET/PATCH /api/template`; each

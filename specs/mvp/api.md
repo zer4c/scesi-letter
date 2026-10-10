@@ -72,7 +72,8 @@ payload returns the original result; same key with a different payload returns
 | GET /jobs/{id} | none | actor-authorized export status and sanitized error code |
 | POST /documents/{id}/versions/{version_id}/finalize | expected_pdf_hash | marks selected bytes sendable |
 | POST /documents/{id}/sign?version_id=... | raw `image/png` body (2 MiB/4 MP maximum), `X-Signing-Authorization` header | synchronous render (20-second limit) to a new immutable, finalized version; no multipart spool, queued image, or saved standalone image |
-| POST /documents/{id}/analyze | expected_revision, kinds | graph job / suggestion results |
+| POST /documents/{id}/analyze/preview | expected_source_hash, kinds | locally redacted body and short-lived confirmation token; no provider request |
+| POST /documents/{id}/analyze | expected_source_hash, kinds, preview_token | bounded two-pass graph; requires unchanged source and explicit preview confirmation |
 | GET /documents/{id}/suggestions | source_hash | scoped structured suggestions |
 | POST /documents/{id}/suggestions/{id}/accept | expected_source_hash | checked edit through collaboration/document service |
 
@@ -98,8 +99,8 @@ awareness binary protocol; JSON lookalikes are rejected. Frames are limited to
 is applied to the live room or broadcast as its durable acknowledgement.
 
 There is no document-delete route, generic signature decrypt route, or generic
-arbitrary webhook-execution route. The old demonstration `/automations/{id}/run`
-cannot return fictitious success once the MVP automation module replaces it.
+arbitrary webhook-execution route. The demonstration `/automations/{id}/run`
+route is removed; the only automation endpoint analyzes a scoped letter source.
 
 Signature envelope fields use fixed protocol-v1 Argon2id parameters (64 MiB,
 three iterations, one lane), AES-256-GCM, canonical Base64, 16-byte salts, and

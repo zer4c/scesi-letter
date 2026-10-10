@@ -1,9 +1,9 @@
 import asyncio
-from datetime import UTC, datetime
 import hashlib
 import hmac
-from zoneinfo import ZoneInfo
+from datetime import UTC, datetime
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 import yaml
 from fastapi import HTTPException
@@ -42,7 +42,6 @@ from app.modules.event.documents import EventDocument
 from app.modules.template.repositories import TemplateRepository
 from app.modules.template.schemas import TemplateSettings
 
-
 LETTER_ORGANIZATION = "SCESI"
 LETTER_TIMEZONE = ZoneInfo("America/La_Paz")
 MAX_SAVE_RETRIES = 5
@@ -69,11 +68,15 @@ def build_markdown(metadata: LetterMetadata, body: str) -> str:
         sort_keys=True,
         default_flow_style=False,
     )
-    return f"---\n{front_matter}---\n\n{body.strip()}\n"
+    return f"---\n{front_matter}---\n\n{normalize_letter_body(body)}\n"
+
+
+def normalize_letter_body(body: str) -> str:
+    return body.replace("\r\n", "\n").replace("\r", "\n").strip()
 
 
 def calculate_source_hash(metadata: LetterMetadata, body: str) -> tuple[str, str]:
-    markdown = build_markdown(metadata, body)
+    markdown = build_markdown(metadata, normalize_letter_body(body))
     source_hash = hashlib.sha256(markdown.encode("utf-8")).hexdigest()
     return markdown, source_hash
 
@@ -101,13 +104,14 @@ class DocumentService:
             raise HTTPException(status_code=503, detail="INTERNAL_ERROR")
         metadata = self._metadata(payload.metadata, None, template.revision)
         await self._validate_event(metadata.event_id)
-        _, source_hash = calculate_source_hash(metadata, payload.body)
+        body = normalize_letter_body(payload.body)
+        _, source_hash = calculate_source_hash(metadata, body)
         document = LetterDocument(
             owner_id=actor.id,
             participant_ids=[],
             document_type=metadata.document_type,
             metadata=metadata,
-            body=payload.body,
+            body=body,
             source_hash=source_hash,
         )
         await self._documents.insert(document)
@@ -235,7 +239,8 @@ class DocumentService:
             document.metadata.template_revision or 1,
         )
         await self._validate_event(canonical_metadata.event_id)
-        _, source_hash = calculate_source_hash(canonical_metadata, body.strip())
+        body = normalize_letter_body(body)
+        _, source_hash = calculate_source_hash(canonical_metadata, body)
         if source_hash == document.source_hash:
             return
 
@@ -246,7 +251,7 @@ class DocumentService:
                     expected_revision=document.draft_revision,
                     expected_source_hash=document.source_hash,
                     metadata=fields,
-                    body=body.strip(),
+                    body=body,
                 ),
                 actor,
                 client,
@@ -265,7 +270,7 @@ class DocumentService:
                 raise HTTPException(status_code=409, detail="CONFLICT")
             current.document_type = canonical_metadata.document_type
             current.metadata = canonical_metadata
-            current.body = body.strip()
+            current.body = body
             current.source_hash = source_hash
             current.draft_revision += 1
             current.updated_at = datetime.now(UTC)
@@ -278,6 +283,7 @@ class DocumentService:
         actor: UserDocument,
         client: AsyncMongoClient,
     ) -> DocumentSaveResponse:
+        payload = payload.model_copy(update={"body": normalize_letter_body(payload.body)})
         now = datetime.now(UTC)
         async with transaction(client) as session:
             document = await self._documents.get_by_id(document_id, session=session)
@@ -421,7 +427,7 @@ class DocumentService:
         return (
             current_fields.model_dump(mode="json", exclude_none=True)
             == fields.model_dump(mode="json", exclude_none=True)
-            and document.body == body.strip()
+            and document.body == normalize_letter_body(body)
         )
 
     @staticmethod

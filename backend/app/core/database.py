@@ -1,5 +1,5 @@
-from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
 from beanie import init_beanie
@@ -20,11 +20,16 @@ from app.modules.auth.documents import (
     SignatureEnvelopeDocument,
     UserDocument,
 )
-from app.modules.contact.documents import ContactDocument
+from app.modules.automation.documents import (
+    LetterSuggestionDocument,
+    LLMQuotaGateDocument,
+    LLMQuotaReservationDocument,
+)
 from app.modules.collaboration.documents import (
     CollaborationUpdateDocument,
     DocumentStateDocument,
 )
+from app.modules.contact.documents import ContactDocument
 from app.modules.document.documents import (
     DocumentVersionDocument,
     ExportJobDocument,
@@ -42,8 +47,7 @@ from app.modules.integration.documents import (
 from app.modules.signature.documents import SigningAuthorizationDocument
 from app.modules.template.documents import TemplateDocument
 
-
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 12
 
 
 def create_mongo_client(settings: Settings) -> AsyncMongoClient:
@@ -113,6 +117,9 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
             OAuthStateDocument,
             DriveArchiveJobDocument,
             DriveFolderMappingDocument,
+            LetterSuggestionDocument,
+            LLMQuotaGateDocument,
+            LLMQuotaReservationDocument,
             DriveArchiveMappingDocument,
         ],
     )
@@ -133,6 +140,7 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
         9: "one_use_signing_authorizations",
         10: "encrypted_google_connections",
         11: "durable_drive_archiving",
+        12: "private_letter_assistance_and_quota_reservations",
     }
     migration_collection = SchemaMigrationDocument.get_pymongo_collection()
     for version, name in migrations.items():

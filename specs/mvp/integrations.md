@@ -40,7 +40,9 @@ Number allocation remains deterministic backend work. The graph can propose a
 document type; it cannot issue sequence numbers. Role lookup is a local tool
 with only role keys/counts exposed to the model; real contacts go directly to
 authorized UI code. If local NER/redaction cannot meet SEC-010, skip provider
-calls for that text until the user resolves the private segments.
+calls for that text until the user resolves the private segments. Return the
+locally redacted body first. Require confirmation bound to user, source hash,
+task kinds, redacted-body hash, and a short expiry before any provider call.
 
 Initial application budgets: 2,000 estimated input tokens and 750 completion
 tokens per pass, maximum two logical provider passes, 6,000 reserved tokens

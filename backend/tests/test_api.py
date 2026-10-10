@@ -22,21 +22,9 @@ def test_health() -> None:
     assert response.json()["status"] == "ok"
 
 
-def test_create_list_and_run_automation() -> None:
-    created = client.post(
-        "/api/automations",
-        json={"name": "Daily report", "action": "generate_report"},
-    )
-    assert created.status_code == 201
-    automation = created.json()
-
-    listed = client.get("/api/automations")
-    assert listed.status_code == 200
-    assert any(item["id"] == automation["id"] for item in listed.json())
-
-    run = client.post(f"/api/automations/{automation['id']}/run")
-    assert run.status_code == 200
-    assert run.json()["status"] == "completed"
+def test_fake_automation_success_endpoint_is_removed() -> None:
+    response = client.post("/api/automations/00000000-0000-0000-0000-000000000001/run")
+    assert response.status_code == 404
 
 
 def test_membership_list_rejects_non_admin() -> None:

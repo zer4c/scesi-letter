@@ -34,6 +34,14 @@ in the application as free-tier limits. The separately supplied quota table is
 recorded below. P-01 remains open for actual account eligibility/limits, retention,
 Spanish quality, and live schema behavior.
 
+T17 pins the Spanish spaCy model package `es_core_news_sm` 3.8.0 from the
+official spaCy model release wheel in `uv.lock`. It runs locally before the
+confirmation endpoint can make a provider request; failure to load the model
+fails closed. NER quality is not a guarantee that every human name is detected,
+so structured sender/recipient/contact variants, conservative proper-noun
+redaction, and output validation remain in place. Actual Groq account/model
+eligibility and free-plan limits remain unverified until P-01.
+
 `openai/gpt-oss-120b` is also documented as production with local tools/JSON and
 no parallel tools. It is an optional explicitly configured candidate, never an
 automatic cost/size fallback. Preview Qwen/MiniMax models are not default choices.
