@@ -190,6 +190,7 @@ class DocumentService:
             md_hash=version.md_hash,
             pdf_hash=version.pdf_hash,
             finalized_at=version.finalized_at,
+            signature_owner_id=version.signature_owner_id,
         )
 
     async def save(

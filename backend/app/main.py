@@ -17,6 +17,7 @@ from app.modules.document.routes import job_router, router as document_router
 from app.modules.event.routes import router as event_router
 from app.modules.signature.routes import password_router as signature_password_router
 from app.modules.signature.routes import router as signature_router
+from app.modules.signature.routes import document_signing_router
 from app.modules.template.routes import router as template_router
 
 
@@ -55,6 +56,7 @@ app.include_router(document_router, prefix=settings.API_PREFIX)
 app.include_router(event_router, prefix=settings.API_PREFIX)
 app.include_router(signature_router, prefix=settings.API_PREFIX)
 app.include_router(signature_password_router, prefix=settings.API_PREFIX)
+app.include_router(document_signing_router, prefix=settings.API_PREFIX)
 app.include_router(job_router, prefix=settings.API_PREFIX)
 app.include_router(collaboration_router)
 app.include_router(automation_router)

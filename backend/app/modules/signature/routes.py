@@ -1,8 +1,10 @@
 from datetime import UTC, datetime
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pymongo import AsyncMongoClient
 
+from app.core.config import Settings, get_settings
 from app.core.database import get_mongo_client, transaction
 from app.modules.auth.documents import (
     SessionDocument,
@@ -13,15 +15,26 @@ from app.modules.auth.routes import auth_service, require_current_user
 from app.modules.auth.passwords import hash_password, verify_password
 from app.modules.auth.services import AuthService, hash_token
 from app.modules.signature.schemas import (
+    SignedVersionResponse,
     SignatureEnvelopeResponse,
     SignaturePasswordChangeRequest,
     SignaturePasswordChangeResponse,
     SignatureUploadRequest,
+    SigningAuthorizationRequest,
+    SigningAuthorizationResponse,
 )
+from app.modules.signature.services import SignatureRenderService
 
 
 router = APIRouter(prefix="/signature", tags=["signature"])
 password_router = APIRouter(prefix="/auth/password", tags=["authentication"])
+document_signing_router = APIRouter(prefix="/documents", tags=["signature"])
+
+
+def signature_render_service(
+    settings: Settings = Depends(get_settings),
+) -> SignatureRenderService:
+    return SignatureRenderService(settings)
 
 
 def utc_now_milliseconds() -> datetime:
@@ -58,6 +71,61 @@ async def get_signature(
     if envelope is None:
         raise HTTPException(status_code=404, detail="NOT_FOUND")
     return envelope_response(envelope)
+
+
+@router.post("/authorizations", response_model=SigningAuthorizationResponse)
+async def create_signing_authorization(
+    payload: SigningAuthorizationRequest,
+    request: Request,
+    user: UserDocument = Depends(require_current_user),
+    service: AuthService = Depends(auth_service),
+    renderer: SignatureRenderService = Depends(signature_render_service),
+) -> SigningAuthorizationResponse:
+    service.require_csrf_header(request)
+    network_address = request.client.host if request.client else "unknown"
+    return await renderer.authorize(payload, user, network_address)
+
+
+@document_signing_router.post(
+    "/{document_id}/sign",
+    response_model=SignedVersionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def sign_document(
+    document_id: UUID,
+    version_id: UUID,
+    request: Request,
+    user: UserDocument = Depends(require_current_user),
+    auth: AuthService = Depends(auth_service),
+    renderer: SignatureRenderService = Depends(signature_render_service),
+    client: AsyncMongoClient = Depends(get_mongo_client),
+) -> SignedVersionResponse:
+    auth.require_csrf_header(request)
+    token = request.headers.get("X-Signing-Authorization", "")
+    if not token:
+        raise HTTPException(status_code=401, detail="SIGNATURE_LOCKED")
+    content_length = request.headers.get("content-length")
+    try:
+        declared_length = int(content_length) if content_length is not None else None
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail="VALIDATION_ERROR") from error
+    if declared_length is not None and declared_length > 2 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="VALIDATION_ERROR")
+    payload = bytearray()
+    async for chunk in request.stream():
+        if len(payload) + len(chunk) > 2 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="VALIDATION_ERROR")
+        payload.extend(chunk)
+    signature_png = bytes(payload)
+    return await renderer.render_signed(
+        document_id,
+        version_id,
+        token,
+        signature_png,
+        request.headers.get("content-type", "").split(";", 1)[0].strip().lower(),
+        user,
+        client,
+    )
 
 
 @router.put("", response_model=SignatureEnvelopeResponse)

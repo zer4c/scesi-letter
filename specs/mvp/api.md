@@ -45,7 +45,7 @@ payload returns the original result; same key with a different payload returns
 | GET /signature | none | own encrypted envelope only |
 | PUT /signature | password, typed envelope v1 | own upload/replacement after reauthentication |
 | POST /auth/password/change | current_password, new_password, expected_envelope_updated_at, replacement_envelope? | compare-and-swap the signature envelope; re-wrap locally; returns envelope_updated_at; replacement required when one exists |
-| POST /signature/authorizations | password, document_id, source_hash, version_id | one-use 60-second token; owner only |
+| POST /signature/authorizations | password, document_id, source_hash, version_id | one-use 60-second token; acting signer must own the envelope and have document access |
 | GET /template | none | single current template with public settings |
 | PATCH /template | settings, expected_revision | new immutable template revision; admin |
 | POST /documents/preview | Markdown source | transient unsigned PDF; authenticated, no persistence or signature |
@@ -71,7 +71,7 @@ payload returns the original result; same key with a different payload returns
 | GET /documents/{id}/versions/{version_id}/markdown | none | scoped UTF-8 Markdown |
 | GET /jobs/{id} | none | actor-authorized export status and sanitized error code |
 | POST /documents/{id}/versions/{version_id}/finalize | expected_pdf_hash | marks selected bytes sendable |
-| POST /documents/{id}/sign | version_id, authorization_token, PNG multipart | synchronous new signed version; no queued image |
+| POST /documents/{id}/sign?version_id=... | raw `image/png` body (2 MiB/4 MP maximum), `X-Signing-Authorization` header | synchronous render (20-second limit) to a new immutable, finalized version; no multipart spool, queued image, or saved standalone image |
 | POST /documents/{id}/analyze | expected_revision, kinds | graph job / suggestion results |
 | GET /documents/{id}/suggestions | source_hash | scoped structured suggestions |
 | POST /documents/{id}/suggestions/{id}/accept | expected_source_hash | checked edit through collaboration/document service |

@@ -64,6 +64,7 @@ class DocumentVersionDocument(StrictDocument):
         "sync_failed",
     ] = "queued"
     finalized_at: datetime | None = None
+    signature_owner_id: UUID | None = None
     created_by: UUID
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 

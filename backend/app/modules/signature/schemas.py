@@ -85,3 +85,26 @@ class SignaturePasswordChangeRequest(BaseModel):
 class SignaturePasswordChangeResponse(BaseModel):
     status: Literal["updated"]
     envelope_updated_at: datetime | None
+
+
+class SigningAuthorizationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    password: str = Field(min_length=1, max_length=1024)
+    document_id: UUID
+    source_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
+    version_id: UUID
+
+
+class SigningAuthorizationResponse(BaseModel):
+    authorization_token: str = Field(min_length=40, max_length=128)
+    expires_at: datetime
+
+
+class SignedVersionResponse(BaseModel):
+    document_id: UUID
+    version_id: UUID
+    version_number: int
+    source_hash: str
+    pdf_hash: str
+    finalized_at: datetime

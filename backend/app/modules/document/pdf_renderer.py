@@ -48,6 +48,10 @@ class RenderLimitExceeded(ValueError):
     pass
 
 
+class SignatureDoesNotFit(ValueError):
+    pass
+
+
 def _plain_text(nodes: list[dict[str, object]]) -> str:
     fragments: list[str] = []
     for node in nodes:
@@ -104,13 +108,7 @@ class LetterPDF(FPDF):
                 "I": "LiberationSerif-Regular.ttf",
                 "BI": "LiberationSerif-Bold.ttf",
             }
-        underline_files = {
-            "U": files[""],
-            "BU": files["B"],
-            "IU": files["I"],
-            "BIU": files["BI"],
-        }
-        for style, filename in {**files, **underline_files}.items():
+        for style, filename in files.items():
             path = self.font_directory / filename
             if not path.is_file():
                 raise FPDFException(f"Bundled font is missing: {filename}")
@@ -214,6 +212,7 @@ class MarkdownPDFRenderer:
         letter: ParsedLetter,
         template: TemplateSettings,
         created_at: datetime | None = None,
+        signature_png: bytes | None = None,
     ) -> bytes:
         pdf = LetterPDF(template, self._settings.FONT_DIRECTORY)
         if created_at is not None:
@@ -229,12 +228,72 @@ class MarkdownPDFRenderer:
             self._render_nodes(pdf, nodes, centered=centered)
             if pdf.page_no() > MAX_PDF_PAGES:
                 raise RenderLimitExceeded("PDF exceeds the page limit")
+        if signature_png is not None:
+            self._render_signature(pdf, signature_png, letter.metadata.signoff)
         if pdf.page_no() > MAX_PDF_PAGES:
             raise RenderLimitExceeded("PDF exceeds the page limit")
         result = pdf.output()
         if isinstance(result, bytearray):
             return bytes(result)
         return bytes(result)
+
+    @staticmethod
+    def _render_signature(
+        pdf: LetterPDF,
+        signature_png: bytes,
+        signoff: str | None,
+    ) -> None:
+        from io import BytesIO
+        from PIL import Image
+
+        try:
+            with Image.open(BytesIO(signature_png)) as image:
+                if image.format != "PNG" or getattr(image, "n_frames", 1) != 1:
+                    raise SignatureDoesNotFit("Signature must be a single-frame PNG")
+                width, height = image.size
+                if width <= 0 or height <= 0 or width * height > 4_000_000:
+                    raise SignatureDoesNotFit("Signature dimensions exceed the limit")
+                image.verify()
+        except SignatureDoesNotFit:
+            raise
+        except Exception as error:
+            raise SignatureDoesNotFit("Signature PNG is invalid") from error
+
+        slot_width = 48.0
+        slot_height = 16.0
+        slot_y = pdf.h - pdf.template.margin_bottom_mm - 34.0
+        signoff_height = 0.0
+        if signoff:
+            signoff_height = float(
+                pdf.multi_cell(
+                    0,
+                    4,
+                    signoff,
+                    dry_run=True,
+                    output=MethodReturnValue.HEIGHT,
+                )
+            )
+        slot_bottom = pdf.h - pdf.template.margin_bottom_mm
+        available_signoff_height = slot_bottom - (slot_y + slot_height + 1)
+        if signoff_height > available_signoff_height:
+            raise SignatureDoesNotFit("Signature block exceeds the fixed slot")
+        if pdf.get_y() > slot_y - 2:
+            raise SignatureDoesNotFit("Letter content overlaps the signature slot")
+        scale = min(slot_width / width, slot_height / height)
+        image_width = width * scale
+        image_height = height * scale
+        image_x = (pdf.w - image_width) / 2
+        pdf.image(
+            BytesIO(signature_png),
+            x=image_x,
+            y=slot_y,
+            w=image_width,
+            h=image_height,
+        )
+        if signoff:
+            pdf.set_font(pdf.family, size=9)
+            pdf.set_xy(pdf.l_margin, slot_y + slot_height + 1)
+            pdf.multi_cell(0, 4, signoff, align="C")
 
     @staticmethod
     def _segments(body: str) -> list[tuple[bool, str]]:

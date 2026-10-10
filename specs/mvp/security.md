@@ -85,7 +85,8 @@ again. Do not cache an unlocked signature across operations. Reauthenticate the
 session and issue a single-use authorization bound to user, document, exact
 source hash/version, and a sixty-second expiry. The browser decrypts locally
 and submits the image over authenticated TLS to the synchronous signed-render
-endpoint. Server checks the bound source and consumes the authorization once.
+endpoint. Server checks the bound source and credential revision, rejects a
+changed draft or inactive account, and consumes the authorization once.
 
 **SEC-007** Render signature plaintext only in memory during the request. Never
 enqueue it in durable jobs, write it to temporary files, traces, dumps, logs, or

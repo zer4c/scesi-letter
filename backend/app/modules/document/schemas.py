@@ -117,6 +117,7 @@ class DocumentVersionDetail(DocumentVersionSummary):
     md_hash: str
     pdf_hash: str | None
     finalized_at: datetime | None
+    signature_owner_id: UUID | None = None
 
 
 class DocumentSaveResponse(BaseModel):

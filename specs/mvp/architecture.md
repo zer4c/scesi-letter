@@ -125,3 +125,7 @@ Keep the signature slot fixed above the footer/signoff. Reject a signature that
 cannot fit; do not cover body text or footer. Arbitrary drag/drop placement is
 deferred. Embed fonts/assets for stable output. Render snapshots with fixed dates
 and deterministic settings; store first produced bytes as the source of truth.
+The signing endpoint accepts a bounded raw PNG body rather than multipart so the
+image remains in process memory; the opaque authorization travels in a header,
+not a URL. Limit images to 2 MiB and 4 megapixels and bound render execution to
+20 seconds. A signed version is finalized as part of successful render.
