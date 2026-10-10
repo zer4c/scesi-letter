@@ -11,6 +11,8 @@ security contracts in `specs/mvp/`.
 - Frontend: React 19 and Vite on Node.js 24, managed only with pnpm 11.19.0.
 - Data: MongoDB replica set for transactions and persistent state.
 - Runtime: Docker Compose, Nginx, and a private artifact volume.
+- Background processing: one Python worker claims durable MongoDB jobs
+  and writes immutable Markdown/PDF artifacts to the private Docker volume.
 
 ## Local setup
 

@@ -1,12 +1,13 @@
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 
 from beanie import init_beanie
 from fastapi import HTTPException, Request, status
 from pymongo import AsyncMongoClient
 from pymongo.asynchronous.client_session import AsyncClientSession
 from pymongo.asynchronous.database import AsyncDatabase
-from pymongo.errors import PyMongoError
+from pymongo.errors import DuplicateKeyError, PyMongoError
 from pymongo.read_concern import ReadConcern
 from pymongo.write_concern import WriteConcern
 
@@ -92,25 +93,30 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
     )
 
     latest_migration = await SchemaMigrationDocument.find_all().sort(-SchemaMigrationDocument.version).first_or_none()
-    if latest_migration is None:
-        latest_migration = SchemaMigrationDocument(
-            version=1,
-            name="initial_auth_schema",
-        )
-        await latest_migration.insert()
-
     if latest_migration is not None and latest_migration.version > SCHEMA_VERSION:
         raise RuntimeError("Database schema is newer than this application version")
 
-    current_version = latest_migration.version if latest_migration is not None else 0
     migrations = {
+        1: "initial_auth_schema",
         2: "persistent_auth_and_login_limits",
         3: "default_template_revisions",
         4: "document_versioned_source",
     }
+    migration_collection = SchemaMigrationDocument.get_pymongo_collection()
     for version, name in migrations.items():
-        if current_version < version:
-            await SchemaMigrationDocument(version=version, name=name).insert()
+        try:
+            await migration_collection.update_one(
+                {"version": version},
+                {
+                    "$setOnInsert": {
+                        "name": name,
+                        "applied_at": datetime.now(UTC),
+                    }
+                },
+                upsert=True,
+            )
+        except DuplicateKeyError:
+            pass
 
     from app.core.config import get_settings
     from app.modules.template.services import TemplateService

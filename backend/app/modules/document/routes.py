@@ -9,6 +9,7 @@ from app.modules.auth.documents import UserDocument
 from app.modules.auth.routes import auth_service, require_current_user
 from app.modules.auth.services import AuthService
 from app.modules.document.markdown_source import InvalidMarkdownSource
+from app.modules.document.jobs import ArtifactService
 from app.modules.document.pdf_renderer import InvalidMarkdown, RenderLimitExceeded
 from app.modules.document.schemas import (
     DocumentCreate,
@@ -18,18 +19,23 @@ from app.modules.document.schemas import (
     DocumentSummary,
     DocumentVersionDetail,
     DocumentVersionSummary,
+    JobStatusResponse,
     RenderRequest,
 )
-from app.modules.document.services import DocumentService
-from app.modules.document.services import DocumentRenderService
+from app.modules.document.services import DocumentRenderService, DocumentService
 from app.modules.template.services import TemplateService
 
 
 router = APIRouter(prefix="/documents", tags=["document rendering"])
+job_router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
 def document_service() -> DocumentService:
     return DocumentService()
+
+
+def artifact_service(settings: Settings = Depends(get_settings)) -> ArtifactService:
+    return ArtifactService(settings)
 
 
 @router.post("", response_model=DocumentSummary, status_code=status.HTTP_201_CREATED)
@@ -96,6 +102,51 @@ async def get_document_version(
     service: DocumentService = Depends(document_service),
 ) -> DocumentVersionDetail:
     return await service.get_version(document_id, version_id, actor)
+
+
+@router.get("/{document_id}/versions/{version_id}/pdf")
+async def download_pdf(
+    document_id: UUID,
+    version_id: UUID,
+    actor: UserDocument = Depends(require_current_user),
+    service: ArtifactService = Depends(artifact_service),
+) -> Response:
+    content = await service.read_artifact(document_id, version_id, "pdf", actor)
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers={
+            "Cache-Control": "no-store",
+            "Content-Disposition": 'attachment; filename="letter.pdf"',
+        },
+    )
+
+
+@router.get("/{document_id}/versions/{version_id}/markdown")
+async def download_markdown(
+    document_id: UUID,
+    version_id: UUID,
+    actor: UserDocument = Depends(require_current_user),
+    service: ArtifactService = Depends(artifact_service),
+) -> Response:
+    content = await service.read_artifact(document_id, version_id, "markdown", actor)
+    return Response(
+        content=content,
+        media_type="text/markdown; charset=utf-8",
+        headers={
+            "Cache-Control": "no-store",
+            "Content-Disposition": 'attachment; filename="letter.md"',
+        },
+    )
+
+
+@job_router.get("/{job_id}", response_model=JobStatusResponse)
+async def get_job_status(
+    job_id: UUID,
+    actor: UserDocument = Depends(require_current_user),
+    service: ArtifactService = Depends(artifact_service),
+) -> JobStatusResponse:
+    return await service.get_job_status(job_id, actor)
 
 
 @router.post("/preview", response_class=Response)

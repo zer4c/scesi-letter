@@ -119,6 +119,24 @@ services:
       start_period: 15s
     restart: unless-stopped
 
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["uv", "run", "--no-dev", "python", "-m", "app.worker"]
+    environment:
+      MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME:?Set MONGO_ROOT_USERNAME in .env}:${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in .env}@mongodb:27017/?replicaSet=rs0&authSource=admin
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-scesi_automation}
+      MONGODB_REPLICA_SET: rs0
+      ARTIFACT_ROOT: /var/lib/scesi/artifacts
+      FONT_DIRECTORY: /app/resources/fonts
+    depends_on:
+      mongo-init:
+        condition: service_completed_successfully
+    volumes:
+      - artifact_data:/var/lib/scesi/artifacts
+    restart: unless-stopped
+
   frontend:
     build:
       context: ./frontend

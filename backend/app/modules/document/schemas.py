@@ -125,6 +125,14 @@ class DocumentSaveResponse(BaseModel):
     changed: bool
 
 
+class JobStatusResponse(BaseModel):
+    job_id: UUID
+    status: Literal["queued", "running", "succeeded", "retry_wait", "failed"]
+    attempt: int
+    error_code: str | None
+    updated_at: datetime
+
+
 class RenderRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

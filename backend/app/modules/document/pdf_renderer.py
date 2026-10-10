@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+from datetime import datetime
 from pathlib import Path
 
 import mistune
@@ -208,8 +209,15 @@ class MarkdownPDFRenderer:
             renderer="ast", plugins=["table", _underline_plugin]
         )
 
-    def render(self, letter: ParsedLetter, template: TemplateSettings) -> bytes:
+    def render(
+        self,
+        letter: ParsedLetter,
+        template: TemplateSettings,
+        created_at: datetime | None = None,
+    ) -> bytes:
         pdf = LetterPDF(template, self._settings.FONT_DIRECTORY)
+        if created_at is not None:
+            pdf.set_creation_date(created_at)
         pdf.add_page()
         self._render_metadata(pdf, letter)
         for centered, block in self._segments(letter.body):

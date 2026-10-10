@@ -105,10 +105,12 @@ class ExportJobDocument(StrictDocument):
     idempotency_key: str = Field(min_length=1, max_length=120)
     status: Literal["queued", "running", "succeeded", "retry_wait", "failed"] = "queued"
     attempt: int = Field(default=0, ge=0)
+    lease_owner: str | None = None
     lease_until: datetime | None = None
     next_attempt_at: datetime | None = None
     error_code: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "jobs"
