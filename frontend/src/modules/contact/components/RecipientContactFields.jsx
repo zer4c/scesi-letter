@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { ApiError } from '../../../core/api.js';
 import { createContact, getContact, searchContacts, updateContact } from '../services/contacts.js';
+import GoogleOtherContactsImport from './GoogleOtherContactsImport.jsx';
 import './RecipientContactFields.css';
 
 const blankContact = (value) => ({
@@ -227,6 +228,7 @@ export default function RecipientContactFields({ value, onChange, csrfToken }) {
           {selectedContact ? 'Editar contacto' : 'Guardar como contacto'}
         </button>
       </div>
+      <GoogleOtherContactsImport csrfToken={csrfToken} />
       {editingContact && (
         <form className="recipient-contact-fields__form" onSubmit={saveContact}>
           <p>{selectedContact ? 'Actualiza el directorio. La carta no se modifica con este guardado.' : 'Este contacto se añadirá al directorio; los datos de la carta se guardan aparte.'}</p>

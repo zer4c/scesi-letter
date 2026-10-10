@@ -39,6 +39,7 @@ GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_ENDPOINT = "https://openidconnect.googleapis.com/v1/userinfo"
 GOOGLE_REVOKE_ENDPOINT = "https://oauth2.googleapis.com/revoke"
 GOOGLE_DRIVE_FILES_ENDPOINT = "https://www.googleapis.com/drive/v3/files"
+GOOGLE_OTHER_CONTACTS_ENDPOINT = "https://people.googleapis.com/v1/otherContacts"
 OAUTH_STATE_TTL = timedelta(minutes=10)
 HTTP_TIMEOUT_SECONDS = 10
 IDENTITY_SCOPES = {
@@ -48,6 +49,7 @@ IDENTITY_SCOPES = {
 PROVIDER_SCOPES = {
     "gmail": "https://www.googleapis.com/auth/gmail.send",
     "drive": "https://www.googleapis.com/auth/drive.file",
+    "contacts": "https://www.googleapis.com/auth/contacts.other.readonly",
 }
 GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send"
 EMAIL_ADAPTER = TypeAdapter(EmailStr)
@@ -343,6 +345,61 @@ class GoogleConnectionService:
             status="root_selected", connection_id=connection_id
         )
 
+    async def list_other_contacts(
+        self, connection_id: UUID, actor: UserDocument, page_token: str | None
+    ) -> dict[str, object]:
+        connection = await self._get_authorized_connection(connection_id, actor)
+        if connection.kind != "contacts" or connection.mode != "personal":
+            raise HTTPException(status_code=404, detail="NOT_FOUND")
+        required_scope = PROVIDER_SCOPES["contacts"]
+        if required_scope not in connection.scopes:
+            raise HTTPException(status_code=403, detail="GOOGLE_SCOPE_MISMATCH")
+        access_token = await self.get_access_token(connection, actor)
+        params: dict[str, str | int] = {"readMask": "names,emailAddresses", "pageSize": 100}
+        if page_token:
+            if len(page_token) > 2048:
+                raise HTTPException(status_code=422, detail="VALIDATION_ERROR")
+            params["pageToken"] = page_token
+        async with self._http_client() as http:
+            try:
+                response = await http.get(
+                    GOOGLE_OTHER_CONTACTS_ENDPOINT,
+                    headers={"Authorization": f"Bearer {access_token}"},
+                    params=params,
+                    timeout=HTTP_TIMEOUT_SECONDS,
+                )
+            except httpx.RequestError as error:
+                raise HTTPException(status_code=503, detail="GOOGLE_UNAVAILABLE") from error
+        if response.status_code in {401, 403}:
+            raise HTTPException(status_code=403, detail="GOOGLE_SCOPE_MISMATCH")
+        if response.is_error:
+            raise HTTPException(status_code=502, detail="GOOGLE_UNAVAILABLE")
+        try:
+            payload = response.json()
+            items = self._normalize_other_contacts(payload)
+            next_page = payload.get("nextPageToken")
+            if next_page is not None and (not isinstance(next_page, str) or len(next_page) > 2048):
+                raise ValueError
+            return {"items": items, "next_page_token": next_page}
+        except (ValueError, TypeError) as error:
+            raise HTTPException(status_code=502, detail="GOOGLE_RESPONSE_INVALID") from error
+
+    @staticmethod
+    def _normalize_other_contacts(payload: object) -> list[dict[str, str]]:
+        if not isinstance(payload, dict) or not isinstance(payload.get("otherContacts", []), list):
+            raise ValueError("Invalid Google People API response")
+        items = []
+        for person in payload.get("otherContacts", []):
+            if not isinstance(person, dict):
+                continue
+            names = person.get("names") or []
+            emails = person.get("emailAddresses") or []
+            name = next((item.get("displayName") for item in names if isinstance(item, dict) and isinstance(item.get("displayName"), str)), "")
+            email = next((item.get("value") for item in emails if isinstance(item, dict) and isinstance(item.get("value"), str)), "")
+            if email:
+                items.append({"name": name or email, "email": email})
+        return items
+
     async def get_access_token(
         self,
         connection: IntegrationConnectionDocument,
@@ -593,6 +650,8 @@ class GoogleConnectionService:
         mode: str,
         actor: UserDocument,
     ) -> UUID | None:
+        if kind == "contacts" and mode != "personal":
+            raise HTTPException(status_code=422, detail="VALIDATION_ERROR")
         if mode == "institutional":
             if actor.role != "admin":
                 raise HTTPException(status_code=403, detail="FORBIDDEN")

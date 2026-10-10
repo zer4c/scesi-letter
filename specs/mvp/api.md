@@ -56,7 +56,8 @@ payload returns the original result; same key with a different payload returns
 | GET /contacts/{id} | none | current shared contact revision for conflict recovery |
 | POST /contacts | typed contact | create validated contact |
 | PATCH /contacts/{id} | fields, expected_revision | quick edit/deactivate; conflict-safe; no hard-delete endpoint |
-| POST /contacts/import | connection_id | approved Google Contacts import job; P-05 |
+| GET /contacts/google/other-contacts | connection_id, page_token? | Preview one People API Other Contacts page; name/email only |
+| POST /contacts/google/other-contacts/import | confirmed, selected contact records | Explicitly add selected contacts; skip existing email addresses |
 | GET /events | year?, pagination | event IDs and display names |
 | POST /events | name, year | sanitized immutable slug |
 | POST /documents | metadata, body | unnumbered draft; no identifier or export job |

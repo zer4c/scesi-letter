@@ -13,7 +13,7 @@ from app.modules.integration.crypto import (
     decrypt_secret,
     encrypt_secret,
 )
-from app.modules.integration.services import GoogleConnectionService
+from app.modules.integration.services import GoogleConnectionService, PROVIDER_SCOPES
 
 
 def test_google_tokens_are_aead_encrypted_and_bound_to_connection() -> None:
@@ -62,6 +62,7 @@ def test_google_connection_policy_separates_personal_and_institutional() -> None
     service = GoogleConnectionService(Settings())
 
     assert service._connection_owner("gmail", "personal", user) == user.id
+    assert service._connection_owner("contacts", "personal", user) == user.id
     assert service._connection_owner("gmail", "institutional", admin) is None
     assert service._connection_owner("drive", "institutional", admin) is None
     with pytest.raises(HTTPException) as error:
@@ -70,6 +71,25 @@ def test_google_connection_policy_separates_personal_and_institutional() -> None
     with pytest.raises(HTTPException) as error:
         service._connection_owner("drive", "personal", user)
     assert error.value.status_code == 422
+    with pytest.raises(HTTPException) as error:
+        service._connection_owner("contacts", "institutional", admin)
+    assert error.value.status_code == 422
+
+
+def test_google_other_contacts_scope_and_preview_exclude_private_fields() -> None:
+    service = GoogleConnectionService(Settings())
+    result = service._normalize_other_contacts({
+        "otherContacts": [{
+            "resourceName": "people/c123",
+            "names": [{"displayName": "Academic Contact"}],
+            "emailAddresses": [{"value": "contact@example.invalid"}],
+            "phoneNumbers": [{"value": "+1 555 0100"}],
+            "biographies": [{"value": "Private note"}],
+        }],
+    })
+
+    assert PROVIDER_SCOPES["contacts"] == "https://www.googleapis.com/auth/contacts.other.readonly"
+    assert result == [{"name": "Academic Contact", "email": "contact@example.invalid"}]
 
 
 def test_google_scope_parser_and_expiry_bounds() -> None:

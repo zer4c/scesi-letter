@@ -1,12 +1,23 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from app.modules.auth.documents import UserDocument
 from app.modules.auth.routes import auth_service, require_current_user
 from app.modules.auth.services import AuthService
-from app.modules.contact.schemas import ContactCreate, ContactPage, ContactResponse, ContactUpdate
+from app.modules.contact.documents import ContactDocument
+from app.modules.contact.schemas import (
+    ContactCreate,
+    ContactPage,
+    ContactResponse,
+    ContactUpdate,
+    GoogleContactImportRequest,
+    GoogleContactImportResponse,
+    GoogleContactPreviewPage,
+)
 from app.modules.contact.services import ContactService
+from app.modules.integration.dependencies import google_connection_service
+from app.modules.integration.services import GoogleConnectionService
 
 
 router = APIRouter(prefix="/contacts", tags=["contacts"])
@@ -71,3 +82,41 @@ async def update_contact(
 ) -> ContactResponse:
     auth.require_csrf_header(request)
     return await service.update(contact_id, payload)
+
+
+@router.get("/google/other-contacts", response_model=GoogleContactPreviewPage)
+async def preview_google_other_contacts(
+    connection_id: UUID,
+    page_token: str | None = Query(default=None, max_length=2048),
+    actor: UserDocument = Depends(require_current_user),
+    integrations: GoogleConnectionService = Depends(google_connection_service),
+) -> GoogleContactPreviewPage:
+    page = await integrations.list_other_contacts(connection_id, actor, page_token)
+    emails = [str(item["email"]).casefold() for item in page["items"]]
+    existing = ContactDocument.get_pymongo_collection().find(
+        {"normalized_emails": {"$in": emails}}, {"normalized_emails": 1}
+    )
+    duplicates = set()
+    async for contact in existing:
+        duplicates.update(contact.get("normalized_emails", []))
+    items = [
+        {**item, "already_imported": str(item["email"]).casefold() in duplicates}
+        for item in page["items"]
+    ]
+    return GoogleContactPreviewPage(
+        items=items, next_page_token=page["next_page_token"]
+    )
+
+
+@router.post("/google/other-contacts/import", response_model=GoogleContactImportResponse)
+async def import_google_other_contacts(
+    payload: GoogleContactImportRequest,
+    request: Request,
+    actor: UserDocument = Depends(require_current_user),
+    service: ContactService = Depends(contact_service),
+    auth: AuthService = Depends(auth_service),
+) -> GoogleContactImportResponse:
+    auth.require_csrf_header(request)
+    if payload.confirmed is not True:
+        raise HTTPException(status_code=422, detail="CONFIRMATION_REQUIRED")
+    return await service.import_google_contacts(payload.contacts, actor)

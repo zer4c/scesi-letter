@@ -46,12 +46,16 @@ examples. It is a confirmed rule, not a proposed default.
 | P-01 | Verify account access/plan/quotas, resolve supplied rate-table plan-label conflict, check retention and live tool/schema behavior | Local graph, documented capabilities and numeric table, fake provider | Real provider readiness / certified Free entitlement |
 | P-02 | Obtain usable original PNG assets through normal attachments | Generic public-style fixture rendering | Exact approved template fidelity |
 | P-04 | Configure Google OAuth project and two sender connections | Mocked adapters / errors | Real Drive/Gmail integration |
-| P-05 | Choose registered Google Contacts import versus extracting correspondents from Gmail | Manual contacts, role matching | Gmail mailbox contact extraction |
+| P-05 | Google People API `otherContacts.list`, using the user's Google “Other contacts” | Manual contacts, role matching | Gmail mailbox contact extraction |
 
-For P-05, prefer People API contacts in the MVP. Extracting correspondents from
-Gmail would require broader mailbox scopes and a separate explicit decision;
-do not silently add mailbox read access. Keep the contact import UI disabled
-until its approved source is known. P-05 does not remove sending from the MVP.
+The user clarified that the intended source is the “Other contacts” Google
+automatically saves after email interactions. Import only through the People
+API `otherContacts.list` endpoint with the narrow read-only
+`contacts.other.readonly` scope. Never read Gmail messages, headers, recipients,
+or bodies. Preview one page at a time and require explicit selection and
+confirmation before adding records to the shared directory. Do not infer
+academic roles or institutions; the importer must collect those fields from
+the user. Existing contacts are skipped, never overwritten. P-05 is resolved.
 
 ## Template Assets Exception
 

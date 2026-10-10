@@ -29,7 +29,7 @@ Use `docs/*` for specification-only work and `feature/*` for new capabilities.
 | T17 Privacy filter and graph engine | T05, T08, T09, T00 P-01 | feature/letter-assistance | feat: add private letter assistance |
 | T18 Suggestion review UI | T12, T17 | feature/suggestion-review | feat: review letter suggestions |
 | T19 Recipient quick editing UI | T05, T12 | feature/contact-editor | feat: edit recipients inline |
-| T20 Approved contact import | T05, T15, P-05 | feature/contact-import | feat: import Google contacts |
+| T20 Approved contact import | T05, T15, P-05 | feature/google-other-contacts-import | feat: import Google contacts |
 | T21 Gmail delivery service | T09, T14, T15, T16 | feature/gmail-delivery | feat: send finalized letter PDFs |
 | T22 Finalization and composer UI | T12, T14, T21 | feature/mail-composer | feat: compose institutional emails |
 | T23 Organization settings UI | T04, T06, T15 | feature/organization-settings | feat: manage organization settings |
@@ -235,11 +235,12 @@ edit, ambiguous role requires selection, server validations visible.
 
 ### T20 — Import the Approved Contact Source
 
-Read P-05, People API scopes, contact dedup rules. Implement only the approved
-source. Proposed MVP imports Google Contacts through People API into a preview
-and user-confirmed merge. Never add Gmail read scopes without a changed decision.
-Checks: paginated import, duplicate handling, denied/revoked scope, excluded
-private fields, no mass silent overwrite. P-05 determines this task's readiness.
+Import Google “Other contacts” through People API with only
+`contacts.other.readonly`; never read Gmail messages. Paginate source previews,
+show name/email only, collect required academic role and institution, and add
+only explicitly selected records after confirmation. Mark existing emails and
+skip duplicates without overwriting. Checks: pagination, duplicate races,
+denied/revoked scope, private fields excluded, no mass silent overwrite.
 
 ### T21 — Send Finalized PDFs Through Gmail
 

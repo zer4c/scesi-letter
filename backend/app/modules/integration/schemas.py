@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 class GoogleConnectionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    kind: Literal["gmail", "drive"]
+    kind: Literal["gmail", "drive", "contacts"]
     mode: Literal["personal", "institutional"]
 
 
@@ -19,7 +19,7 @@ class GoogleAuthorizationResponse(BaseModel):
 
 class IntegrationConnectionStatus(BaseModel):
     id: UUID
-    kind: Literal["gmail", "drive"]
+    kind: Literal["gmail", "drive", "contacts"]
     mode: Literal["personal", "institutional"]
     google_account: EmailStr
     scopes: list[str]

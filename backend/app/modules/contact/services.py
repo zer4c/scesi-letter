@@ -12,6 +12,7 @@ from app.modules.contact.schemas import (
     ContactPage,
     ContactResponse,
     ContactUpdate,
+    GoogleContactImportResponse,
 )
 
 
@@ -96,6 +97,30 @@ class ContactService:
         except DuplicateKeyError as error:
             raise HTTPException(status_code=409, detail="CONFLICT") from error
         return self._response(contact)
+
+    async def import_google_contacts(
+        self, payloads: list[ContactCreate], actor: UserDocument
+    ) -> GoogleContactImportResponse:
+        imported: list[ContactResponse] = []
+        skipped = 0
+        collection = ContactDocument.get_pymongo_collection()
+        for payload in payloads:
+            values = payload.model_dump()
+            emails = [str(email).casefold() for email in values.pop("emails")]
+            keys = self._email_keys(emails)
+            if keys and await collection.find_one({"normalized_emails": {"$in": keys}}):
+                skipped += 1
+                continue
+            contact = ContactDocument(
+                **values, emails=emails, normalized_emails=keys, created_by=actor.id
+            )
+            try:
+                await self._contacts.insert(contact)
+            except DuplicateKeyError:
+                skipped += 1
+                continue
+            imported.append(self._response(contact))
+        return GoogleContactImportResponse(imported=imported, skipped_duplicates=skipped)
 
     async def update(
         self,

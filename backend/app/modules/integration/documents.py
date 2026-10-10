@@ -18,7 +18,7 @@ class EncryptedValue(BaseModel):
 
 class IntegrationConnectionDocument(StrictDocument):
     id: UUID = Field(default_factory=uuid4)
-    kind: Literal["gmail", "drive"]
+    kind: Literal["gmail", "drive", "contacts"]
     mode: Literal["personal", "institutional"]
     owner_user_id: UUID | None = None
     google_account: EmailStr
@@ -54,7 +54,7 @@ class OAuthStateDocument(StrictDocument):
     id: UUID = Field(default_factory=uuid4)
     state_hash: str = Field(min_length=64, max_length=64)
     user_id: UUID
-    kind: Literal["gmail", "drive"]
+    kind: Literal["gmail", "drive", "contacts"]
     mode: Literal["personal", "institutional"]
     scopes: list[str] = Field(min_length=1, max_length=8)
     encrypted_code_verifier: EncryptedValue

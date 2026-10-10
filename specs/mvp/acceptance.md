@@ -41,7 +41,7 @@ history. Tests must verify behavior and invariants, not mirror implementations.
 | AC-31 | UI contract | Full edit/sign/send/contact flow works keyboard-only, at 200% zoom, on narrow screens, and without external logo loading. | T11..T23 |
 | AC-32 | P-01 | Verify Free plan/account eligibility for the candidate with a real local-tool round trip and schema-validated Spanish suggestion; record actual limits/date and resolve pasted table attribution; no paid fallback. | T00, T17 |
 | AC-33 | P-02, BR-005 | Approved original assets render matching repeated header/footer without baked telephone numbers; use generic fixtures until approved assets available. | T06, T07 |
-| AC-34 | P-05 | Approved Google Contacts import is paginated, consented, duplicate-safe, and does not read Gmail mailboxes with send-only scopes. | T20 |
+| AC-34 | P-05 | Google Other Contacts import uses the personal contacts.other.readonly scope, paginates previews, imports only selected records after confirmation, skips duplicate emails, and never reads Gmail messages. | T20 |
 | AC-35 | Local runtime | Clean setup and backup restore preserve MongoDB/version/artifact hashes; env secrets absent from image layers/browser bundle/Git; bootstrap remains idempotent. | T01, T24 |
 | AC-36 | AGENTS.md | All work uses focused branches, atomic <=50-character English subjects, English engineering paths/code, no emojis, Bootstrap Icons, modular domains. | all |
 | AC-37 | AGENTS.md, tooling | One pinned pnpm version and `pnpm-lock.yaml`; frozen clean install/build and Docker/CI use only pnpm; no forbidden package-manager invocation remains. | T01, T25 |

@@ -104,3 +104,20 @@ class ContactPage(BaseModel):
     page: int
     page_size: int
     total: int
+
+
+class GoogleContactPreviewPage(BaseModel):
+    items: list[dict[str, str | bool]]
+    next_page_token: str | None = None
+
+
+class GoogleContactImportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    confirmed: bool
+    contacts: list[ContactCreate] = Field(min_length=1, max_length=25)
+
+
+class GoogleContactImportResponse(BaseModel):
+    imported: list[ContactResponse]
+    skipped_duplicates: int

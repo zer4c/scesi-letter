@@ -16,6 +16,7 @@ from app.modules.integration.archive_schemas import (
     ArchiveRetryResponse,
     ArchiveStatusResponse,
 )
+from app.modules.integration.dependencies import google_connection_service
 from app.modules.integration.documents import (
     DriveArchiveJobDocument,
     DriveArchiveMappingDocument,
@@ -35,16 +36,10 @@ router = APIRouter(prefix="/integrations", tags=["integrations"])
 archive_router = APIRouter(prefix="/documents", tags=["document archive"])
 
 
-def integration_service(
-    settings: Settings = Depends(get_settings),
-) -> GoogleConnectionService:
-    return GoogleConnectionService(settings)
-
-
 @router.get("", response_model=IntegrationConnectionsResponse)
 async def list_connections(
     actor: UserDocument = Depends(require_current_user),
-    service: GoogleConnectionService = Depends(integration_service),
+    service: GoogleConnectionService = Depends(google_connection_service),
 ) -> IntegrationConnectionsResponse:
     return await service.list_connections(actor)
 
@@ -55,7 +50,7 @@ async def create_google_authorization(
     request: Request,
     actor: UserDocument = Depends(require_current_user),
     auth: AuthService = Depends(auth_service),
-    service: GoogleConnectionService = Depends(integration_service),
+    service: GoogleConnectionService = Depends(google_connection_service),
 ) -> GoogleAuthorizationResponse:
     auth.require_csrf_header(request)
     return await service.create_authorization(payload, actor)
@@ -68,7 +63,7 @@ async def google_callback(
     error: str | None = None,
     settings: Settings = Depends(get_settings),
     actor: UserDocument = Depends(require_current_user),
-    service: GoogleConnectionService = Depends(integration_service),
+    service: GoogleConnectionService = Depends(google_connection_service),
     client: AsyncMongoClient = Depends(get_mongo_client),
 ) -> RedirectResponse:
     if error is not None:
@@ -78,9 +73,14 @@ async def google_callback(
         )
     if code is None or state is None:
         raise HTTPException(status_code=400, detail="VALIDATION_ERROR")
-    await service.complete_authorization(code, state, actor, client)
+    status = await service.complete_authorization(code, state, actor, client)
+    destination = (
+        "/documents?contacts=connected"
+        if status.kind == "contacts"
+        else "/settings/organization?connection=connected"
+    )
     return RedirectResponse(
-        f"{settings.APP_PUBLIC_URL.rstrip('/')}/settings/organization?connection=connected",
+        f"{settings.APP_PUBLIC_URL.rstrip('/')}{destination}",
         status_code=303,
     )
 
@@ -92,7 +92,7 @@ async def select_drive_root(
     request: Request,
     actor: UserDocument = Depends(require_current_user),
     auth: AuthService = Depends(auth_service),
-    service: GoogleConnectionService = Depends(integration_service),
+    service: GoogleConnectionService = Depends(google_connection_service),
     client: AsyncMongoClient = Depends(get_mongo_client),
 ) -> ConnectionMutationResponse:
     auth.require_csrf_header(request)
@@ -105,7 +105,7 @@ async def disconnect_google(
     request: Request,
     actor: UserDocument = Depends(require_current_user),
     auth: AuthService = Depends(auth_service),
-    service: GoogleConnectionService = Depends(integration_service),
+    service: GoogleConnectionService = Depends(google_connection_service),
     client: AsyncMongoClient = Depends(get_mongo_client),
 ) -> ConnectionMutationResponse:
     auth.require_csrf_header(request)
