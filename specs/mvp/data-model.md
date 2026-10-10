@@ -15,7 +15,8 @@ others, invitation hashes, or storage filesystem paths in general API responses.
 |---|---|---|
 | users | id, normalized_email, display_name, password_hash, role, active, revision, created_at | Unique normalized email; unique partial index on role `admin` |
 | invitations | id, token_hash, intended_email, expires_at, redeemed_at, created_by | Unique token hash; one-time redemption in transaction |
-| sessions | id, token_hash, user_id, expires_at, revoked_at | Unique token hash; TTL after expiry, authorization also checks expiry directly |
+| sessions | id, token_hash, user_id, csrf_token_hash, expires_at, idle_expires_at, last_seen_at, revoked_at | Unique token hash; TTL indexes on absolute and idle expiry; authorization checks both directly |
+| login_attempts | key_hash, window_start, failures, expires_at | Unique (key_hash, window_start); TTL cleanup; `key_hash` is an HMAC pseudonym, never a raw email or IP |
 | signature_envelopes | user_id, envelope_version, kdf, salt, wrapped_dek, wrapping_iv, ciphertext, image_iv, mime, updated_at | Unique user_id; all encryption values validated against permitted algorithm/bounds |
 | signing_authorizations | token_hash, user_id, document_id, version_id, source_hash, expires_at, consumed_at? | Unique token hash; consume once atomically; 60-second expiry checked directly; TTL removes expired security state |
 | templates | id, revision, active, public_asset_ids, header, footer, typography, margins, created_at | Unique (id, revision); exactly one selected template ID |
@@ -79,6 +80,10 @@ cannot be accepted twice or applied against an incompatible revision.
 ## Atomic Operations
 
 - Redeem an invitation and create its user within one transaction.
+- Enforce login limits in fixed 15-minute windows: at most five failed attempts
+  per normalized account and thirty per network address. Persist only HMAC
+  pseudonyms made with the deployment rate-limit key; return `Retry-After` when
+  blocked. Limit records are security state, not an audit log.
 - Allocate a counter, assign the identifier, create the first numbered snapshot,
   and enqueue export within one transaction. Concurrent saves of the same draft
   reuse the already assigned identifier. Abort transactions leave no assignment.

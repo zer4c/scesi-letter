@@ -69,6 +69,8 @@ class SessionDocument(StrictDocument):
     user_id: UUID
     csrf_token_hash: str = Field(min_length=64, max_length=64)
     expires_at: datetime
+    idle_expires_at: datetime
+    last_seen_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     revoked_at: datetime | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
@@ -88,6 +90,33 @@ class SessionDocument(StrictDocument):
                 [("expires_at", ASCENDING)],
                 expireAfterSeconds=0,
                 name="ttl_sessions_expiry",
+            ),
+            IndexModel(
+                [("idle_expires_at", ASCENDING)],
+                expireAfterSeconds=0,
+                name="ttl_sessions_idle_expiry",
+            ),
+        ]
+
+
+class LoginAttemptDocument(StrictDocument):
+    key_hash: str = Field(min_length=64, max_length=64)
+    window_start: int = Field(ge=0)
+    failures: int = Field(default=0, ge=0)
+    expires_at: datetime
+
+    class Settings:
+        name = "login_attempts"
+        indexes = [
+            IndexModel(
+                [("key_hash", ASCENDING), ("window_start", ASCENDING)],
+                unique=True,
+                name="uq_login_attempt_window",
+            ),
+            IndexModel(
+                [("expires_at", ASCENDING)],
+                expireAfterSeconds=0,
+                name="ttl_login_attempt_expiry",
             ),
         ]
 

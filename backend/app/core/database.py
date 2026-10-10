@@ -13,13 +13,14 @@ from pymongo.write_concern import WriteConcern
 from app.core.config import Settings
 from app.modules.auth.documents import (
     InvitationDocument,
+    LoginAttemptDocument,
     SchemaMigrationDocument,
     SessionDocument,
     UserDocument,
 )
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def create_mongo_client(settings: Settings) -> AsyncMongoClient:
@@ -70,6 +71,7 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
         document_models=[
             UserDocument,
             InvitationDocument,
+            LoginAttemptDocument,
             SessionDocument,
             SchemaMigrationDocument,
         ],
@@ -77,9 +79,18 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
 
     latest_migration = await SchemaMigrationDocument.find_all().sort(-SchemaMigrationDocument.version).first_or_none()
     if latest_migration is None:
-        await SchemaMigrationDocument(
-            version=SCHEMA_VERSION,
+        latest_migration = SchemaMigrationDocument(
+            version=1,
             name="initial_auth_schema",
-        ).insert()
-    elif latest_migration.version > SCHEMA_VERSION:
+        )
+        await latest_migration.insert()
+
+    if latest_migration is not None and latest_migration.version > SCHEMA_VERSION:
         raise RuntimeError("Database schema is newer than this application version")
+
+    current_version = latest_migration.version if latest_migration is not None else 0
+    if current_version < 2:
+        await SchemaMigrationDocument(
+            version=2,
+            name="persistent_auth_and_login_limits",
+        ).insert()

@@ -29,6 +29,14 @@ Open `http://localhost:8080`. FastAPI's API documentation is at
 set at `http://localhost:8000/api/ready`. MongoDB is bound to loopback on port
 27017 for direct backend development and is not exposed on other interfaces.
 
+Before first use, generate a private rate-limit key with `openssl rand -hex 32`,
+set `APP_RATE_LIMIT_KEY` in `.env`, and configure an initial administrator email
+and passphrase (at least 12 characters). Then run
+`docker compose exec backend uv run python -m app.modules.auth.bootstrap_admin`.
+The bootstrap command creates an administrator only when no user exists; remove
+the bootstrap password from `.env` afterward. Invitations are created by that
+administrator in the authenticated API.
+
 To run the Vite development server while the Compose backend/database are up:
 
 ```bash

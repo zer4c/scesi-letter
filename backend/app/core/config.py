@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     APP_PUBLIC_URL: str = "http://localhost:8080"
     API_PREFIX: str = "/api"
     COOKIE_SECURE: bool = False
+    APP_RATE_LIMIT_KEY: SecretStr = SecretStr(
+        "development-only-rate-limit-key-change-before-use"
+    )
     ALLOWED_ORIGINS: str = "http://localhost:8080,http://localhost:5173"
 
     MONGODB_URI: SecretStr = SecretStr("mongodb://localhost:27017/?replicaSet=rs0")
@@ -127,6 +130,10 @@ class Settings(BaseSettings):
     def validate_runtime_security(self) -> "Settings":
         if self.APP_ENV == "production" and not self.COOKIE_SECURE:
             raise ValueError("COOKIE_SECURE must be enabled in production")
+        if self.APP_ENV == "production" and len(
+            self.APP_RATE_LIMIT_KEY.get_secret_value()
+        ) < 64:
+            raise ValueError("APP_RATE_LIMIT_KEY must contain at least 64 characters")
         if self.LLM_MAX_PASSES <= 0 or self.LLM_MAX_RETRIES < 0:
             raise ValueError("LLM pass and retry limits are invalid")
         if min(

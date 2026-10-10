@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pymongo import AsyncClientSession
+from pymongo.asynchronous.client_session import AsyncClientSession
 
 from app.modules.auth.documents import InvitationDocument, SessionDocument, UserDocument
 

@@ -5,7 +5,10 @@
 **SEC-001** Use Argon2id for server-side password hashing with independent salts.
 Benchmark parameters and pin the implementation. Accept passphrases, require
 at least twelve characters, support password managers, and never log passwords.
-Rate-limit login/unlock attempts by account and network source.
+Rate-limit login attempts to five failures per normalized account and thirty
+per network address in a fixed fifteen-minute window. Return `Retry-After` on
+block. Store only HMAC-SHA-256 pseudonyms using a deployment secret, never raw
+email addresses or IPs, and expire buckets with a TTL index.
 
 **SEC-002** Use opaque server sessions in HttpOnly, SameSite cookies. Use Secure
 cookies under HTTPS. A development-only HTTP cookie mode must be explicit in
@@ -13,8 +16,10 @@ configuration and reject non-loopback/public origins. Protect mutation endpoints
 with CSRF validation and verify WebSocket Origin. OAuth callbacks validate
 session/state and exact registered redirect binding; top-level callbacks may
 have no Origin header, so do not depend on that header alone. Store session hashes.
-Proposed expiry: thirty minutes idle, twelve hours absolute; reauthentication
-for sensitive actions. Disabling a user revokes sessions and connected rooms.
+Use a thirty-minute idle expiry and twelve-hour absolute expiry, refreshing the
+idle window at most every five minutes. Mutations require the `X-CSRF-Token`
+header to match the session-bound CSRF cookie. Reauthenticate for sensitive
+actions. Disabling a user revokes sessions and connected rooms.
 
 **SEC-003** Administrator powers cover membership, template settings, and
 institutional integrations. They do not confer signature-envelope access.
