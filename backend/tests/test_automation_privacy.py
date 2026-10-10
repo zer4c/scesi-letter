@@ -185,6 +185,18 @@ def test_private_name_cannot_leak_through_a_custom_role_key():
     assert not privacy.validate_public_text("juan perez", ["Juan Pérez"])
 
 
+def test_manual_redaction_masks_the_selected_unicode_source_range():
+    privacy = LocalPrivacyFilter()
+    body = "Para María: préstamo de sala."
+    start = len("Para ")
+    end = start + len("María")
+    redacted = privacy.redact(body, [], [(start, end)])
+
+    assert "María" not in redacted.text
+    assert redacted.map_range(0, len("Para ")) == (0, len("Para "))
+    assert redacted.map_range(start, start + len("[ENTITY_1]")) is None
+
+
 def test_privacy_confirmation_token_binds_user_source_tasks_and_redaction():
     service = object.__new__(LetterAssistanceService)
     service._settings = Settings(
@@ -198,15 +210,26 @@ def test_privacy_confirmation_token_binds_user_source_tasks_and_redaction():
     redacted = LocalPrivacyFilter().redact("Juan Pérez pide un aula.", [])
     from datetime import UTC, datetime, timedelta
 
-    expires_at = datetime.now(UTC) + timedelta(minutes=5)
-    token = service._preview_token(document, user_id, kinds, redacted, expires_at)
+    from app.modules.automation.schemas import RedactionRange
 
-    service._verify_preview(token, document, user_id, kinds, redacted)
+    expires_at = datetime.now(UTC) + timedelta(minutes=5)
+    manual_redactions = [RedactionRange(start=0, end=4)]
+    token = service._preview_token(
+        document, user_id, kinds, redacted, expires_at, manual_redactions
+    )
+
+    service._verify_preview(
+        token, document, user_id, kinds, redacted, manual_redactions
+    )
     with pytest.raises(HTTPException) as error:
-        service._verify_preview(token, document, uuid4(), kinds, redacted)
+        service._verify_preview(
+            token, document, uuid4(), kinds, redacted, manual_redactions
+        )
     assert error.value.detail == "PRIVACY_PREVIEW_EXPIRED"
     with pytest.raises(HTTPException):
-        service._verify_preview(token, document, user_id, ["style"], redacted)
+        service._verify_preview(
+            token, document, user_id, ["style"], redacted, manual_redactions
+        )
 
 
 def test_older_provider_headers_cannot_increase_shared_remaining_budget():

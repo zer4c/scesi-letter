@@ -34,6 +34,7 @@ from app.modules.automation.quota import (
 from app.modules.automation.schemas import (
     ListDocumentTypesInput,
     ModelOutput,
+    RedactionRange,
     RoleLookupInput,
     SuggestionKind,
 )
@@ -110,7 +111,11 @@ def _tool_definitions(role_keys: list[str]) -> list[dict[str, Any]]:
     return tools
 
 
-async def _privacy_material(document: LetterDocument, privacy: LocalPrivacyFilter):
+async def _privacy_material(
+    document: LetterDocument,
+    privacy: LocalPrivacyFilter,
+    manual_redactions: list[RedactionRange] | None = None,
+):
     collection = ContactDocument.get_pymongo_collection()
     contacts = (
         await collection.find({"active": True}, {"name": 1, "role_key": 1})
@@ -125,7 +130,11 @@ async def _privacy_material(document: LetterDocument, privacy: LocalPrivacyFilte
             private_names.append(party.name)
     private_names.extend(contact["name"] for contact in contacts if contact.get("name"))
     try:
-        redacted = privacy.redact(document.body, private_names)
+        redacted = privacy.redact(
+            document.body,
+            private_names,
+            [(item.start, item.end) for item in manual_redactions or []],
+        )
     except PrivacyReviewRequired as error:
         raise HTTPException(status_code=422, detail=error.code) from error
     role_counts: dict[str, int] = {}
@@ -443,7 +452,12 @@ def _validate(state: AnalysisState) -> dict[str, Any]:
                 }
             )
         elif kind == "topic":
-            if item.get("field") != "topic" or not isinstance(replacement, str):
+            if (
+                item.get("field") != "topic"
+                or not isinstance(replacement, str)
+                or not replacement.strip()
+                or len(replacement) > 200
+            ):
                 continue
             if not privacy.validate_public_text(replacement, state["private_names"]):
                 continue
@@ -458,6 +472,7 @@ def _validate(state: AnalysisState) -> dict[str, Any]:
         elif kind == "recipient_role":
             if (
                 item.get("field") != "recipient_role"
+                or not isinstance(replacement, str)
                 or replacement not in state["role_counts"]
             ):
                 continue
@@ -512,6 +527,7 @@ class LetterAssistanceService:
         kinds,
         redacted: RedactedText,
         expires_at: datetime,
+        manual_redactions: list[RedactionRange],
     ) -> str:
         claims = {
             "document_id": str(document.id),
@@ -519,6 +535,7 @@ class LetterAssistanceService:
             "source_hash": document.source_hash,
             "kinds": sorted(kinds),
             "redacted_hash": hashlib.sha256(redacted.text.encode()).hexdigest(),
+            "manual_redactions": [item.model_dump() for item in manual_redactions],
             "expires_at": int(expires_at.timestamp()),
             "nonce": secrets.token_urlsafe(12),
         }
@@ -538,6 +555,7 @@ class LetterAssistanceService:
         user_id,
         kinds: list[SuggestionKind],
         redacted: RedactedText,
+        manual_redactions: list[RedactionRange],
     ) -> None:
         try:
             payload, signature = token.split(".", 1)
@@ -562,6 +580,7 @@ class LetterAssistanceService:
                 "source_hash": document.source_hash,
                 "kinds": sorted(kinds),
                 "redacted_hash": expected_hash,
+                "manual_redactions": [item.model_dump() for item in manual_redactions],
                 "expires_at": claims.get("expires_at"),
                 "nonce": claims.get("nonce"),
             }
@@ -570,18 +589,26 @@ class LetterAssistanceService:
             raise HTTPException(status_code=409, detail="PRIVACY_PREVIEW_EXPIRED")
 
     async def create_preview(
-        self, document: LetterDocument, user_id, kinds: list[SuggestionKind]
+        self,
+        document: LetterDocument,
+        user_id,
+        kinds: list[SuggestionKind],
+        manual_redactions: list[RedactionRange],
     ) -> dict[str, Any]:
-        redacted, _, _ = await _privacy_material(document, self._privacy)
+        redacted, _, _ = await _privacy_material(
+            document, self._privacy, manual_redactions
+        )
         expires_at = datetime.now(UTC) + timedelta(minutes=5)
         return {
             "source_hash": document.source_hash,
             "redacted_body": redacted.text,
             "redaction_count": len(redacted.spans),
             "preview_token": self._preview_token(
-                document, user_id, kinds, redacted, expires_at
+                document, user_id, kinds, redacted, expires_at, manual_redactions
             ),
             "expires_at": expires_at,
+            "manual_redactions": manual_redactions,
+            "analysis_available": self._provider_configured,
         }
 
     async def analyze(
@@ -590,15 +617,20 @@ class LetterAssistanceService:
         user_id,
         kinds: list[SuggestionKind],
         preview_token: str,
+        manual_redactions: list[RedactionRange],
+        collaboration=None,
+        actor=None,
     ) -> list[LetterSuggestionDocument]:
         if self._settings.LLM_PROVIDER == "disabled":
             raise HTTPException(status_code=503, detail="LLM_DISABLED")
-        if self._settings.GROQ_API_KEY is None:
+        if not self._provider_configured:
             raise HTTPException(status_code=503, detail="LLM_NOT_CONFIGURED")
         redacted, role_counts, private_names = await _privacy_material(
-            document, self._privacy
+            document, self._privacy, manual_redactions
         )
-        self._verify_preview(preview_token, document, user_id, kinds, redacted)
+        self._verify_preview(
+            preview_token, document, user_id, kinds, redacted, manual_redactions
+        )
         adapter = self._adapter or GroqCompletionAdapter(self._settings)
         state: AnalysisState = {
             "document": document,
@@ -624,6 +656,8 @@ class LetterAssistanceService:
                 raise HTTPException(
                     status_code=503, detail="LLM_ANALYSIS_TIMEOUT"
                 ) from error
+            if collaboration is not None and actor is not None:
+                await collaboration.checkpoint_now(document.id, actor)
             current = await LetterDocument.find_one(LetterDocument.id == document.id)
             if current is None or current.source_hash != document.source_hash:
                 raise HTTPException(status_code=409, detail="STALE_SOURCE")
@@ -640,3 +674,8 @@ class LetterAssistanceService:
         finally:
             if self._adapter is None and isinstance(adapter, GroqCompletionAdapter):
                 await adapter.close()
+
+    @property
+    def _provider_configured(self) -> bool:
+        key = self._settings.GROQ_API_KEY
+        return bool(key and key.get_secret_value().strip())

@@ -7,7 +7,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request(path, options = {}) {
+export async function request(path, options = {}) {
   const response = await fetch(path, {
     credentials: 'same-origin',
     ...options,
@@ -27,8 +27,8 @@ async function request(path, options = {}) {
   if (!response.ok) {
     throw new ApiError(
       response.status,
-      payload?.error?.code,
-      payload?.error?.message,
+      payload?.error?.code || payload?.detail,
+      payload?.error?.message || payload?.message,
     );
   }
 

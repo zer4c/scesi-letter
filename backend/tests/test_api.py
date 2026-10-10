@@ -27,6 +27,22 @@ def test_fake_automation_success_endpoint_is_removed() -> None:
     assert response.status_code == 404
 
 
+def test_letter_assistance_routes_require_a_privacy_preview_and_decisions():
+    paths = app.openapi()["paths"]
+
+    assert "post" in paths["/api/documents/{document_id}/analyze/preview"]
+    assert "post" in paths["/api/documents/{document_id}/analyze"]
+    assert "get" in paths["/api/documents/{document_id}/suggestions"]
+    assert (
+        "post"
+        in paths["/api/documents/{document_id}/suggestions/{suggestion_id}/accept"]
+    )
+    assert (
+        "post"
+        in paths["/api/documents/{document_id}/suggestions/{suggestion_id}/reject"]
+    )
+
+
 def test_membership_list_rejects_non_admin() -> None:
     app.dependency_overrides[require_current_user] = lambda: SimpleNamespace(
         role="user"
@@ -92,7 +108,9 @@ def test_signature_envelope_requires_fixed_kdf_and_gcm_sizes() -> None:
     with pytest.raises(ValidationError):
         SignatureEnvelopeInput.model_validate({**envelope, "memory_kib": 2**30})
     with pytest.raises(ValidationError):
-        SignatureEnvelopeInput.model_validate({**envelope, "image_iv": envelope["wrapping_iv"]})
+        SignatureEnvelopeInput.model_validate(
+            {**envelope, "image_iv": envelope["wrapping_iv"]}
+        )
 
 
 def test_signature_envelope_rejects_noncanonical_or_wrong_size_base64() -> None:
@@ -114,8 +132,12 @@ def test_signature_envelope_rejects_noncanonical_or_wrong_size_base64() -> None:
     with pytest.raises(ValidationError):
         SignatureEnvelopeInput.model_validate({**envelope, "salt": "not-base64!"})
     with pytest.raises(ValidationError):
-        SignatureEnvelopeInput.model_validate({**envelope, "salt": f"{envelope['salt']} "})
+        SignatureEnvelopeInput.model_validate(
+            {**envelope, "salt": f"{envelope['salt']} "}
+        )
     with pytest.raises(ValidationError):
-        SignatureEnvelopeInput.model_validate({**envelope, "wrapped_dek": base64.b64encode(b"short").decode()})
+        SignatureEnvelopeInput.model_validate(
+            {**envelope, "wrapped_dek": base64.b64encode(b"short").decode()}
+        )
     with pytest.raises(ValidationError):
         SignatureEnvelopeInput.model_validate({**envelope, "user_id": "another-user"})

@@ -52,7 +52,12 @@ class LocalPrivacyFilter:
     def _normalize(value: str) -> str:
         return " ".join(unicodedata.normalize("NFKC", value).casefold().split())
 
-    def redact(self, body: str, private_names: list[str]) -> RedactedText:
+    def redact(
+        self,
+        body: str,
+        private_names: list[str],
+        manual_redactions: list[tuple[int, int]] | None = None,
+    ) -> RedactedText:
         if not body.strip():
             raise PrivacyReviewRequired("EMPTY_BODY")
         candidates: list[tuple[int, int, str]] = []
@@ -92,6 +97,10 @@ class LocalPrivacyFilter:
             (m.start(), m.end(), "IDENTIFIER")
             for m in IDENTIFIER_PATTERN.finditer(body)
         )
+        for start, end in manual_redactions or []:
+            if start < 0 or end <= start or end > len(body):
+                raise PrivacyReviewRequired("INVALID_MANUAL_REDACTION")
+            candidates.append((start, end, "ENTITY"))
 
         priority = {"EMAIL": 0, "PHONE": 1, "IDENTIFIER": 2, "PERSON": 3, "ENTITY": 4}
         candidates.sort(

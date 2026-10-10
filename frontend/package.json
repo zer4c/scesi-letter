@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
+    "test:assistance": "node --test scripts/assistance-offsets.test.mjs",
     "test:signature-crypto": "node --test scripts/signature-crypto.test.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "interop:crdt": "node scripts/yjs-interop-fixture.mjs"

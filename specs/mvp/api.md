@@ -72,12 +72,11 @@ payload returns the original result; same key with a different payload returns
 | GET /jobs/{id} | none | actor-authorized export status and sanitized error code |
 | POST /documents/{id}/versions/{version_id}/finalize | expected_pdf_hash | marks selected bytes sendable |
 | POST /documents/{id}/sign?version_id=... | raw `image/png` body (2 MiB/4 MP maximum), `X-Signing-Authorization` header | synchronous render (20-second limit) to a new immutable, finalized version; no multipart spool, queued image, or saved standalone image |
-| POST /documents/{id}/analyze/preview | expected_source_hash, kinds | locally redacted body and short-lived confirmation token; no provider request |
-| POST /documents/{id}/analyze | expected_source_hash, kinds, preview_token | bounded two-pass graph; requires unchanged source and explicit preview confirmation |
+| POST /documents/{id}/analyze/preview | expected_source_hash, kinds, manual_redactions? | locally redacted body and short-lived confirmation token; no provider request |
+| POST /documents/{id}/analyze | expected_source_hash, kinds, preview_token, manual_redactions? | bounded two-pass graph; requires unchanged source and explicit preview confirmation |
 | GET /documents/{id}/suggestions | source_hash | scoped structured suggestions |
-| POST /documents/{id}/suggestions/{id}/accept | expected_source_hash | checked edit through collaboration/document service |
-
-| POST /documents/{id}/suggestions/{id}/reject | none | proposal rejected |
+| POST /documents/{id}/suggestions/{id}/accept | expected_source_hash, contact_id? | atomically applies one exact CRDT edit and decision; recipient-role proposals require a locally selected contact |
+| POST /documents/{id}/suggestions/{id}/reject | none | marks one pending proposal rejected |
 | GET /integrations | none | connection status; no token values |
 | POST /integrations/google/connect | kind, mode | PKCE authorization URL; institutional requires admin; only approved scopes |
 | GET /integrations/google/callback | code, state | authenticated session plus one-use state; encrypted tokens; account status only |
@@ -144,8 +143,13 @@ back to original-source offsets before creating public suggestions. Reject
 replacements crossing any protected placeholder, unrecognized placeholder,
 ambiguous alignment, or mismatched text. The server computes public `original`
 from its source snapshot; it never asks Groq to reconstruct private identities.
-Apply the same restriction to metadata suggestions: never invent or alter a
-sender/recipient identity. Discard the mapping after analysis, do not trace it.
+The user may add up to twenty non-overlapping manual redaction ranges, measured
+as Unicode code points in the normalized body. Bind those ranges into the
+short-lived privacy token and reproduce the same redacted bytes at analysis;
+never accept modified client-supplied redacted text. Discard the mapping after
+analysis, do not trace it. Apply the same restriction to metadata suggestions:
+never invent or alter a sender identity. A recipient-role proposal may only
+resolve to a user-selected, active local contact with the exact proposed role.
 
 ## Realtime
 

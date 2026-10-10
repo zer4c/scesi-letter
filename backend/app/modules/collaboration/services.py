@@ -1,12 +1,11 @@
 import asyncio
-from dataclasses import dataclass, field
 import json
 import logging
 import time
+from dataclasses import dataclass, field
 from uuid import UUID
 
-from fastapi import WebSocket
-from pymongo import AsyncMongoClient
+from fastapi import HTTPException, WebSocket
 from pycrdt import (
     Decoder,
     Doc,
@@ -18,13 +17,19 @@ from pycrdt import (
     create_update_message,
     handle_sync_message,
 )
+from pymongo import AsyncMongoClient
+from pymongo.errors import PyMongoError
 
 from app.modules.auth.documents import UserDocument
-from app.modules.collaboration.repositories import CollaborationRepository
+from app.modules.automation.documents import LetterSuggestionDocument
+from app.modules.collaboration.repositories import (
+    CollaborationRepository,
+    CollaborationRevisionConflict,
+)
+from app.modules.contact.documents import ContactDocument
 from app.modules.document.documents import LetterDocument
 from app.modules.document.schemas import LetterMetadata
-from app.modules.document.services import DocumentService
-
+from app.modules.document.services import DocumentService, calculate_source_hash
 
 MAX_FRAME_BYTES = 1024 * 1024
 MAX_DOCUMENT_BODY = 100_000
@@ -64,8 +69,6 @@ class CollaborationService:
             room = self._rooms.get(document.id)
             if room is not None:
                 room.document = document
-                if len(room.clients) >= MAX_ROOM_CLIENTS:
-                    raise InvalidCollaborationMessage("Room capacity reached")
                 return room
 
             initial = self._new_document(document)
@@ -102,6 +105,127 @@ class CollaborationService:
             actor,
             self._client,
         )
+
+    async def apply_suggestion(
+        self,
+        document: LetterDocument,
+        suggestion: LetterSuggestionDocument,
+        expected_source_hash: str,
+        contact_id: UUID | None,
+        actor: UserDocument,
+    ) -> None:
+        room = await self.open_room(document)
+        async with room.lock:
+            candidate = self._empty_document()
+            candidate.apply_update(room.ydoc.get_update())
+            current_metadata = self._parse_metadata(candidate).model_copy(
+                update={
+                    "identifier": document.identifier,
+                    "template_revision": document.metadata.template_revision,
+                }
+            )
+            body = str(candidate["body"])
+            _, current_hash = calculate_source_hash(current_metadata, body)
+            if (
+                current_hash != expected_source_hash
+                or suggestion.source_hash != expected_source_hash
+                or suggestion.status != "proposed"
+            ):
+                raise HTTPException(status_code=409, detail="STALE_SUGGESTION")
+
+            if suggestion.kind in {"grammar", "style", "reference"}:
+                start, end = suggestion.start, suggestion.end
+                if (
+                    start is None
+                    or end is None
+                    or suggestion.original is None
+                    or suggestion.replacement is None
+                    or start < 0
+                    or end <= start
+                    or body[start:end] != suggestion.original
+                ):
+                    raise HTTPException(status_code=409, detail="STALE_SUGGESTION")
+                # pycrdt mutation slices use UTF-8 byte offsets even though
+                # suggestion offsets and Python string slices use code points.
+                utf8_start = len(body[:start].encode("utf-8"))
+                utf8_end = len(body[:end].encode("utf-8"))
+                candidate["body"][utf8_start:utf8_end] = suggestion.replacement
+            elif suggestion.kind == "document_type":
+                if (
+                    suggestion.field != "document_type"
+                    or suggestion.replacement is None
+                    or document.identifier is not None
+                ):
+                    raise HTTPException(
+                        status_code=409, detail="SUGGESTION_NOT_APPLICABLE"
+                    )
+                candidate["metadata"]["document_type"] = suggestion.replacement
+            elif suggestion.kind == "topic":
+                if suggestion.field != "topic" or suggestion.replacement is None:
+                    raise HTTPException(
+                        status_code=409, detail="SUGGESTION_NOT_APPLICABLE"
+                    )
+                candidate["metadata"]["topic"] = suggestion.replacement
+            elif suggestion.kind == "recipient_role":
+                if (
+                    suggestion.field != "recipient_role"
+                    or suggestion.replacement is None
+                    or contact_id is None
+                ):
+                    raise HTTPException(
+                        status_code=422, detail="CONTACT_SELECTION_REQUIRED"
+                    )
+                contact = await ContactDocument.find_one(
+                    ContactDocument.id == contact_id,
+                    ContactDocument.active == True,  # noqa: E712
+                )
+                if contact is None or contact.role_key != suggestion.replacement:
+                    raise HTTPException(status_code=409, detail="CONTACT_NOT_AVAILABLE")
+                recipient = {
+                    "name": contact.name,
+                    "role": contact.role_label,
+                    "institution": contact.institution,
+                    "career": contact.career,
+                    "email": contact.emails[0] if contact.emails else None,
+                }
+                candidate["metadata"]["recipient"] = json.dumps(
+                    recipient, ensure_ascii=False, separators=(",", ":")
+                )
+                candidate["metadata"]["recipient_contact_id"] = str(contact.id)
+            else:
+                raise HTTPException(status_code=409, detail="SUGGESTION_NOT_APPLICABLE")
+
+            self._validate_document_state(document, candidate)
+            update = candidate.get_update(room.ydoc.get_state())
+            if update == b"\x00\x00":
+                raise HTTPException(status_code=409, detail="SUGGESTION_NO_CHANGE")
+            try:
+                sequence = await self._repository.append_suggestion_update(
+                    document_id=document.id,
+                    suggestion_id=suggestion.id,
+                    expected_source_hash=expected_source_hash,
+                    expected_sequence=room.last_sequence,
+                    update=update,
+                    snapshot=candidate.get_update(),
+                    state_vector=candidate.get_state(),
+                    client=self._client,
+                )
+            except CollaborationRevisionConflict as error:
+                raise HTTPException(
+                    status_code=409, detail="STALE_SUGGESTION"
+                ) from error
+            except PyMongoError as error:
+                if error.has_error_label("TransientTransactionError") or getattr(
+                    error, "code", None
+                ) in {112, 251, 11000}:
+                    raise HTTPException(
+                        status_code=409, detail="STALE_SUGGESTION"
+                    ) from error
+                raise
+            room.ydoc.apply_update(update)
+            room.last_sequence = sequence
+            self._schedule_checkpoint(room, actor.id)
+            await self._broadcast_locked(room, create_update_message(update))
 
     async def add_client(
         self,
@@ -147,7 +271,9 @@ class CollaborationService:
                 if not Decoder(message[1:]).read_message():
                     raise ValueError("Awareness payload is empty")
             except Exception as error:
-                raise InvalidCollaborationMessage("Awareness message is malformed") from error
+                raise InvalidCollaborationMessage(
+                    "Awareness message is malformed"
+                ) from error
             await self._broadcast(room, message)
             return
         if message_type != YMessageType.SYNC:
@@ -161,7 +287,9 @@ class CollaborationService:
                 subtype = YSyncMessageType(decoder.read_var_uint())
                 reply = handle_sync_message(message[1:], candidate)
             except Exception as error:
-                raise InvalidCollaborationMessage("Sync message is malformed") from error
+                raise InvalidCollaborationMessage(
+                    "Sync message is malformed"
+                ) from error
 
             update = candidate.get_update(room.ydoc.get_state())
             if update != b"\x00\x00":
@@ -322,12 +450,14 @@ class CollaborationService:
         raw_metadata = dict(ydoc["metadata"])
         for key in ("recipient", "sender"):
             partial_party = {}
-            for field in ("name", "role", "institution", "career", "email"):
-                map_key = f"{key}_{field}"
+            for field_name in ("name", "role", "institution", "career", "email"):
+                map_key = f"{key}_{field_name}"
                 if map_key in raw_metadata:
-                    partial_party[field] = raw_metadata.pop(map_key)
+                    partial_party[field_name] = raw_metadata.pop(map_key)
             if partial_party:
-                raw_metadata[key] = partial_party if partial_party.get("name", "").strip() else None
+                raw_metadata[key] = (
+                    partial_party if partial_party.get("name", "").strip() else None
+                )
             value = raw_metadata.get(key)
             if isinstance(value, str):
                 raw_metadata[key] = json.loads(value)

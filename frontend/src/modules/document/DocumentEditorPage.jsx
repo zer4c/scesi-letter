@@ -13,6 +13,7 @@ import {
   saveDocument,
 } from '../../core/api.js';
 import { createCollaborativeDocument } from '../../core/collaboration/yjsTransport.js';
+import LetterAssistancePanel from '../automation/components/LetterAssistancePanel.jsx';
 
 const CodeMirror = lazy(() => import('@uiw/react-codemirror'));
 const PdfPreview = lazy(() => import('./components/PdfPreview.jsx'));
@@ -467,6 +468,12 @@ export default function DocumentEditorPage() {
             {awareness.length > 0 && <span className="collaboration-status__people">{awareness.length} en la carta</span>}
           </div>
           <span className={`save-status save-status--${saveState}`} role="status">{pendingUpdates > 0 ? 'Sincronización pendiente' : saveLabel}</span>
+          <LetterAssistancePanel
+            documentId={documentId}
+            csrfToken={csrfToken}
+            body={body}
+            isNumbered={Boolean(identifier)}
+          />
           <button className="button-primary workspace-save" disabled={!synced || saveState === 'saving'} onClick={handleSave} type="button">
             Guardar
           </button>

@@ -188,6 +188,21 @@ For later updates, review the chosen submodule revision, then use
 Preserve existing skill directories; do not use `--force` to overwrite them.
 Installing skills does not automatically install or authorize design hooks.
 
+### T18 suggestion review UI
+
+The pinned vendored Impeccable skill (4.5.2) was discovered and its Operate,
+shape, and craft-floor guidance reviewed before extending the existing editor.
+The current editor surface brief was followed; no new product/design direction
+or PDF-theme redesign was introduced. The local context command required an
+`IMPECCABLE_HOME` under `/tmp` because the default home is read-only. One
+`detect --json` run on `LetterAssistancePanel.jsx`, its stylesheet, and
+`DocumentEditorPage.jsx` completed with no findings (`[]`). A system-Chromium
+Playwright review covered synthetic privacy-preview and suggestion-result
+states on desktop and the privacy flow at mobile width. The suggestion-result
+state visibly keeps each proposal separate and requires explicit per-item
+acceptance; no automatic apply-all control is present. Agent-based finish
+review could not run because the session's subagent thread limit was reached.
+
 Review actual task behavior on desktop and narrow screens, inspect code, and
 verify accessibility/performance. Preserve agreed product/design context across
 tasks. Impeccable guidance never overrides signature privacy or product rules.
