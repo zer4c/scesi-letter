@@ -45,6 +45,8 @@ def test_contact_directory_supports_selected_record_reload():
     assert "post" in paths["/api/contacts"]
     assert "get" in paths["/api/contacts/{contact_id}"]
     assert "patch" in paths["/api/contacts/{contact_id}"]
+    assert "get" in paths["/api/contacts/google/other-contacts"]
+    assert "post" in paths["/api/contacts/google/other-contacts/import"]
 
 
 def test_gmail_dispatch_and_scoped_job_status_routes_exist():
