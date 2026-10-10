@@ -44,6 +44,7 @@ class InvitationDocument(StrictDocument):
     intended_email: str = Field(min_length=3, max_length=254)
     expires_at: datetime
     redeemed_at: datetime | None = None
+    revoked_at: datetime | None = None
     created_by: UUID
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 

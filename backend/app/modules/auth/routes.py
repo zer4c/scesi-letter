@@ -1,5 +1,6 @@
 from datetime import timedelta
 from ipaddress import ip_address
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pymongo import AsyncMongoClient
@@ -13,7 +14,11 @@ from app.modules.auth.schemas import (
     InvitationRedeem,
     InvitationRedeemResponse,
     InvitationResponse,
+    InvitationSummary,
     LoginRequest,
+    UserPage,
+    UserSummary,
+    UserUpdate,
 )
 from app.modules.auth.services import (
     ABSOLUTE_SESSION_HOURS,
@@ -27,6 +32,7 @@ from app.modules.auth.services import (
 
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
+membership_router = APIRouter(prefix="/users", tags=["membership"])
 
 
 def auth_service(settings: Settings = Depends(get_settings)) -> AuthService:
@@ -144,6 +150,31 @@ async def create_invitation(
     )
 
 
+@router.get("/invitations", response_model=list[InvitationSummary])
+async def list_invitations(
+    actor: UserDocument = Depends(require_current_user),
+    service: AuthService = Depends(auth_service),
+) -> list[InvitationSummary]:
+    if actor.role != "admin":
+        raise HTTPException(status_code=403, detail="FORBIDDEN")
+    return await service.list_invitations()
+
+
+@router.delete("/invitations/{invitation_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_invitation(
+    invitation_id: UUID,
+    request: Request,
+    client: AsyncMongoClient = Depends(get_mongo_client),
+    actor: UserDocument = Depends(require_current_user),
+    service: AuthService = Depends(auth_service),
+) -> Response:
+    service.require_csrf_header(request)
+    if actor.role != "admin":
+        raise HTTPException(status_code=403, detail="FORBIDDEN")
+    await service.revoke_invitation(invitation_id, client)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.post(
     "/invitations/redeem",
     response_model=InvitationRedeemResponse,
@@ -165,3 +196,33 @@ async def redeem_invitation(
         email=user.normalized_email,
         status="created",
     )
+
+
+@membership_router.get("", response_model=UserPage)
+async def list_users(
+    page: int = 1,
+    page_size: int = 25,
+    actor: UserDocument = Depends(require_current_user),
+    service: AuthService = Depends(auth_service),
+) -> UserPage:
+    if actor.role != "admin":
+        raise HTTPException(status_code=403, detail="FORBIDDEN")
+    if page < 1 or page_size < 1 or page_size > 100:
+        raise HTTPException(status_code=400, detail="VALIDATION_ERROR")
+    items, total = await service.list_users(page, page_size)
+    return UserPage(items=items, page=page, page_size=page_size, total=total)
+
+
+@membership_router.patch("/{user_id}")
+async def update_user(
+    user_id: UUID,
+    payload: UserUpdate,
+    request: Request,
+    actor: UserDocument = Depends(require_current_user),
+    service: AuthService = Depends(auth_service),
+    client: AsyncMongoClient = Depends(get_mongo_client),
+) -> UserSummary:
+    service.require_csrf_header(request)
+    if actor.role != "admin":
+        raise HTTPException(status_code=403, detail="FORBIDDEN")
+    return await service.update_user(actor.id, user_id, payload, client)

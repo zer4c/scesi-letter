@@ -35,7 +35,11 @@ payload returns the original result; same key with a different payload returns
 | POST /auth/logout | CSRF | revoke current session |
 | GET /auth/session | none | public user, CSRF token |
 | POST /auth/invitations | email | invitation link/token once; admin |
+| GET /auth/invitations | none | admin; metadata/status only, never token hashes |
+| DELETE /auth/invitations/{id} | CSRF | admin; revoke pending invitation |
 | POST /auth/invitations/redeem | token, name, password | created user; intended identity only |
+| GET /users | page, page_size | admin-only public membership page |
+| PATCH /users/{id} | active?, role?, expected_revision | admin-only, revision-safe; role promotion transfers the singleton admin role |
 | POST /auth/password/change | current_password, new_password, replacement_envelope? | atomic password/envelope handling |
 | POST /auth/password/reset-invitations | user_id | recovery invitation; admin; no signature recovery |
 | GET /users | pagination | public membership list; admin |

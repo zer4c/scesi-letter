@@ -25,6 +25,10 @@ actions. Disabling a user revokes sessions and connected rooms.
 institutional integrations. They do not confer signature-envelope access.
 Every request authorizes the current actor and target; opaque IDs are not access
 control. Invitations expire after 72 hours by default and cannot be reused.
+Membership changes require the expected user revision. Promoting a user to
+administrator atomically transfers the singleton role; the former administrator
+is demoted. The last active administrator cannot be deactivated or demoted.
+Deactivation revokes that user's sessions and retains their documents and files.
 
 **SEC-004** Bootstrap the administrator only if none exists. Read initial
 credentials from deployment configuration; never reset an existing admin's

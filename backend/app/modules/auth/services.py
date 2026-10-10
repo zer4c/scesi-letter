@@ -3,10 +3,11 @@ from datetime import UTC, datetime, timedelta
 import hashlib
 import secrets
 from urllib.parse import quote
+from uuid import UUID
 
 from fastapi import HTTPException, Request, status
 from pymongo import AsyncMongoClient
-from pymongo.errors import DuplicateKeyError
+from pymongo.errors import DuplicateKeyError, PyMongoError
 
 from app.core.config import Settings
 from app.core.database import transaction
@@ -14,7 +15,12 @@ from app.modules.auth.documents import InvitationDocument, SessionDocument, User
 from app.modules.auth.passwords import hash_password, password_hasher, verify_password
 from app.modules.auth.rate_limit import LoginRateLimiter
 from app.modules.auth.repositories import InvitationRepository, UserRepository
-from app.modules.auth.schemas import PublicUser
+from app.modules.auth.schemas import (
+    InvitationSummary,
+    PublicUser,
+    UserSummary,
+    UserUpdate,
+)
 
 
 SESSION_COOKIE = "scesi_session"
@@ -133,6 +139,47 @@ class AuthService:
 
         return token, expires_at
 
+    async def list_invitations(self) -> list[InvitationSummary]:
+        now = datetime.now(UTC)
+        summaries = []
+        for invitation in await self._invitations.list_all():
+            if invitation.revoked_at is not None:
+                state = "revoked"
+            elif invitation.redeemed_at is not None:
+                state = "redeemed"
+            elif invitation.expires_at <= now:
+                state = "expired"
+            else:
+                state = "pending"
+            summaries.append(
+                InvitationSummary(
+                    id=invitation.id,
+                    email=invitation.intended_email,
+                    created_at=invitation.created_at,
+                    expires_at=invitation.expires_at,
+                    status=state,
+                )
+            )
+        return summaries
+
+    async def revoke_invitation(
+        self, invitation_id: UUID, client: AsyncMongoClient
+    ) -> None:
+        now = datetime.now(UTC)
+        async with transaction(client) as session:
+            invitation = await self._invitations.get_by_id(
+                invitation_id, session=session
+            )
+            if (
+                invitation is None
+                or invitation.redeemed_at is not None
+                or invitation.revoked_at is not None
+                or invitation.expires_at <= now
+            ):
+                raise HTTPException(status_code=404, detail="NOT_FOUND")
+            invitation.revoked_at = now
+            await invitation.save(session=session)
+
     async def redeem_invitation(
         self,
         token: str,
@@ -151,6 +198,7 @@ class AuthService:
                 if (
                     invitation is None
                     or invitation.redeemed_at is not None
+                    or invitation.revoked_at is not None
                     or invitation.expires_at <= now
                 ):
                     raise HTTPException(
@@ -182,6 +230,92 @@ class AuthService:
                 status_code=status.HTTP_409_CONFLICT,
                 detail="CONFLICT",
             ) from error
+
+    async def list_users(
+        self, page: int, page_size: int
+    ) -> tuple[list[UserSummary], int]:
+        users, total = await self._users.list_page(page, page_size)
+        return [
+            UserSummary(
+                id=user.id,
+                email=user.normalized_email,
+                display_name=user.display_name,
+                role=user.role,
+                active=user.active,
+                revision=user.revision,
+                created_at=user.created_at,
+            )
+            for user in users
+        ], total
+
+    async def update_user(
+        self,
+        actor_id: UUID,
+        target_id: UUID,
+        update: UserUpdate,
+        client: AsyncMongoClient,
+    ) -> UserSummary:
+        now = datetime.now(UTC)
+        try:
+            async with transaction(client) as session:
+                actor = await self._users.get_by_id(actor_id, session=session)
+                target = await self._users.get_by_id(target_id, session=session)
+                if actor is None or actor.role != "admin" or not actor.active:
+                    raise HTTPException(status_code=403, detail="FORBIDDEN")
+                if target is None:
+                    raise HTTPException(status_code=404, detail="NOT_FOUND")
+                if target.revision != update.expected_revision:
+                    raise HTTPException(status_code=409, detail="CONFLICT")
+
+                new_active = target.active if update.active is None else update.active
+                new_role = target.role if update.role is None else update.role
+                if new_role == "admin" and not new_active:
+                    raise HTTPException(status_code=400, detail="VALIDATION_ERROR")
+
+                if target.role == "admin" and (new_role != "admin" or not new_active):
+                    active_admin_count = await UserDocument.find(
+                        UserDocument.role == "admin", UserDocument.active == True,
+                        session=session,
+                    ).count()
+                    if active_admin_count <= 1:
+                        raise HTTPException(status_code=409, detail="CONFLICT")
+
+                if new_role == "admin" and target.role != "admin":
+                    current_admin = await UserDocument.find_one(
+                        UserDocument.role == "admin", session=session
+                    )
+                    if current_admin is not None and current_admin.id != target.id:
+                        current_admin.role = "user"
+                        current_admin.revision += 1
+                        await self._users.save(current_admin, session)
+
+                target.active = new_active
+                target.role = new_role
+                target.revision += 1
+                await self._users.save(target, session)
+
+                if not new_active:
+                    await SessionDocument.get_pymongo_collection().update_many(
+                        {"user_id": target.id, "revoked_at": None},
+                        {"$set": {"revoked_at": now}},
+                        session=session,
+                    )
+
+                return UserSummary(
+                    id=target.id,
+                    email=target.normalized_email,
+                    display_name=target.display_name,
+                    role=target.role,
+                    active=target.active,
+                    revision=target.revision,
+                    created_at=target.created_at,
+                )
+        except DuplicateKeyError as error:
+            raise HTTPException(status_code=409, detail="CONFLICT") from error
+        except PyMongoError as error:
+            if error.code == 112 or error.has_error_label("TransientTransactionError"):
+                raise HTTPException(status_code=409, detail="CONFLICT") from error
+            raise
 
     async def authenticate_request(self, request: Request) -> UserDocument:
         raw_token = request.cookies.get(SESSION_COOKIE)
