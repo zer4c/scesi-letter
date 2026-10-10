@@ -37,6 +37,7 @@ def create_mongo_client(settings: Settings) -> AsyncMongoClient:
         settings.MONGODB_URI.get_secret_value(),
         appname="scesi-letter",
         uuidRepresentation="standard",
+        tz_aware=True,
         serverSelectionTimeoutMS=5000,
         connectTimeoutMS=5000,
         maxPoolSize=30,
@@ -66,8 +67,8 @@ def get_mongo_client(request: Request) -> AsyncMongoClient:
 
 @asynccontextmanager
 async def transaction(client: AsyncMongoClient) -> AsyncIterator[AsyncClientSession]:
-    async with await client.start_session() as session:
-        async with session.start_transaction(
+    async with client.start_session() as session:
+        async with await session.start_transaction(
             read_concern=ReadConcern("snapshot"),
             write_concern=WriteConcern("majority"),
         ):
