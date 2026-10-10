@@ -232,3 +232,16 @@ Impeccable detector run returned no findings (`[]`). Backend suite: 41 passed,
 2 skipped; isolated MongoDB/Gmail-mock integration: 1 passed; frontend build and
 both focused test suites passed. No real Gmail send was attempted. Agent-based
 finish review remained unavailable because the session thread limit was reached.
+
+### T23 organization settings UI
+
+The existing authenticated application frame and token system were preserved.
+One `detect --json` run on the organization page, stylesheet, and navigation
+returned no findings (`[]`). Synthetic Chromium checks covered invitation
+creation, member role transfer, new template revision, Drive folder selection,
+and a 390px viewport with no horizontal overflow. Screenshots are local review
+artifacts. Backend suite: 43 passed, 2 skipped; frontend production build and
+focused tests passed. Google OAuth was not exercised with a real account; the
+consent-denied callback was tested to return to organization settings. An
+independent Impeccable finish-reviewer agent could not start because the session
+thread limit was reached; the required degraded manual review was completed.

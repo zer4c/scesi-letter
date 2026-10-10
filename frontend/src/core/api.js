@@ -37,6 +37,54 @@ export async function request(path, options = {}) {
 
 export const getSession = () => request('/api/auth/session');
 
+export const listOrganizationUsers = (page = 1, pageSize = 25) => request(
+  `/api/users?page=${page}&page_size=${pageSize}`,
+);
+
+export const createOrganizationInvitation = (email, csrfToken) => request('/api/auth/invitations', {
+  method: 'POST',
+  headers: { 'X-CSRF-Token': csrfToken },
+  body: JSON.stringify({ email }),
+});
+
+export const listOrganizationInvitations = () => request('/api/auth/invitations');
+
+export const revokeOrganizationInvitation = (id, csrfToken) => request(`/api/auth/invitations/${id}`, {
+  method: 'DELETE',
+  headers: { 'X-CSRF-Token': csrfToken },
+});
+
+export const updateOrganizationUser = (id, payload, csrfToken) => request(`/api/users/${id}`, {
+  method: 'PATCH',
+  headers: { 'X-CSRF-Token': csrfToken },
+  body: JSON.stringify(payload),
+});
+
+export const getOrganizationTemplate = () => request('/api/template');
+
+export const updateOrganizationTemplate = (payload, csrfToken) => request('/api/template', {
+  method: 'PATCH',
+  headers: { 'X-CSRF-Token': csrfToken },
+  body: JSON.stringify(payload),
+});
+
+export const createGoogleAuthorization = (kind, mode, csrfToken) => request('/api/integrations/google/connect', {
+  method: 'POST',
+  headers: { 'X-CSRF-Token': csrfToken },
+  body: JSON.stringify({ kind, mode }),
+});
+
+export const setInstitutionalDriveRoot = (id, folderId, csrfToken) => request(`/api/integrations/${id}/root`, {
+  method: 'PUT',
+  headers: { 'X-CSRF-Token': csrfToken },
+  body: JSON.stringify({ folder_id: folderId }),
+});
+
+export const disconnectGoogleIntegration = (id, csrfToken) => request(`/api/integrations/${id}/disconnect`, {
+  method: 'POST',
+  headers: { 'X-CSRF-Token': csrfToken },
+});
+
 export const logIn = (email, password) => request('/api/auth/login', {
   method: 'POST',
   body: JSON.stringify({ email, password }),

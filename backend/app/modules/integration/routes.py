@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from pymongo import AsyncMongoClient
 
 from app.core.config import Settings, get_settings
@@ -10,6 +11,16 @@ from app.modules.auth.routes import auth_service, require_current_user
 from app.modules.auth.services import AuthService
 from app.modules.document.documents import DocumentVersionDocument, LetterDocument
 from app.modules.document.services import DocumentService
+from app.modules.integration.archive_schemas import (
+    ArchiveRetryRequest,
+    ArchiveRetryResponse,
+    ArchiveStatusResponse,
+)
+from app.modules.integration.documents import (
+    DriveArchiveJobDocument,
+    DriveArchiveMappingDocument,
+)
+from app.modules.integration.repositories import DriveArchiveJobRepository
 from app.modules.integration.schemas import (
     ConnectionMutationResponse,
     DriveRootRequest,
@@ -18,17 +29,7 @@ from app.modules.integration.schemas import (
     IntegrationConnectionsResponse,
     IntegrationConnectionStatus,
 )
-from app.modules.integration.archive_schemas import (
-    ArchiveRetryRequest,
-    ArchiveRetryResponse,
-    ArchiveStatusResponse,
-)
-from app.modules.integration.documents import (
-    DriveArchiveJobDocument, DriveArchiveMappingDocument,
-)
-from app.modules.integration.repositories import DriveArchiveJobRepository
 from app.modules.integration.services import GoogleConnectionService
-
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 archive_router = APIRouter(prefix="/documents", tags=["document archive"])
@@ -65,15 +66,23 @@ async def google_callback(
     code: str | None = None,
     state: str | None = None,
     error: str | None = None,
+    settings: Settings = Depends(get_settings),
     actor: UserDocument = Depends(require_current_user),
     service: GoogleConnectionService = Depends(integration_service),
     client: AsyncMongoClient = Depends(get_mongo_client),
-) -> IntegrationConnectionStatus:
+) -> RedirectResponse:
     if error is not None:
-        raise HTTPException(status_code=400, detail="GOOGLE_CONSENT_DENIED")
+        return RedirectResponse(
+            f"{settings.APP_PUBLIC_URL.rstrip('/')}/settings/organization?connection=denied",
+            status_code=303,
+        )
     if code is None or state is None:
         raise HTTPException(status_code=400, detail="VALIDATION_ERROR")
-    return await service.complete_authorization(code, state, actor, client)
+    await service.complete_authorization(code, state, actor, client)
+    return RedirectResponse(
+        f"{settings.APP_PUBLIC_URL.rstrip('/')}/settings/organization?connection=connected",
+        status_code=303,
+    )
 
 
 @router.put("/{connection_id}/root", response_model=ConnectionMutationResponse)

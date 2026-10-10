@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from pycrdt import Doc, Map
 from pydantic import ValidationError
 
+from app.core.database import get_mongo_client
 from app.main import app
 from app.modules.auth.routes import require_current_user
 from app.modules.collaboration.services import CollaborationService
@@ -58,6 +59,38 @@ def test_selected_version_can_be_finalized_explicitly():
     assert (
         "post"
         in paths["/api/documents/{document_id}/suggestions/{suggestion_id}/reject"]
+    )
+
+
+def test_organization_settings_routes_are_available():
+    paths = app.openapi()["paths"]
+    assert "get" in paths["/api/users"]
+    assert "patch" in paths["/api/users/{user_id}"]
+    assert "post" in paths["/api/auth/invitations"]
+    assert "get" in paths["/api/auth/invitations"]
+    assert "get" in paths["/api/template"]
+    assert "patch" in paths["/api/template"]
+    assert "post" in paths["/api/integrations/google/connect"]
+    assert "get" in paths["/api/integrations/google/callback"]
+
+
+def test_denied_google_consent_returns_to_organization_settings():
+    app.dependency_overrides[require_current_user] = lambda: SimpleNamespace(
+        role="admin"
+    )
+    app.dependency_overrides[get_mongo_client] = lambda: None
+    try:
+        response = client.get(
+            "/api/integrations/google/callback?error=access_denied",
+            follow_redirects=False,
+        )
+    finally:
+        app.dependency_overrides.pop(require_current_user, None)
+        app.dependency_overrides.pop(get_mongo_client, None)
+
+    assert response.status_code == 303
+    assert response.headers["location"].endswith(
+        "/settings/organization?connection=denied"
     )
 
 
