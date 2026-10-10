@@ -76,6 +76,12 @@ class ContactService:
             total=total,
         )
 
+    async def get(self, contact_id: UUID) -> ContactResponse:
+        contact = await self._contacts.get_by_id(contact_id)
+        if contact is None:
+            raise HTTPException(status_code=404, detail="NOT_FOUND")
+        return self._response(contact)
+
     async def create(self, payload: ContactCreate, actor: UserDocument) -> ContactResponse:
         now_values = payload.model_dump()
         emails = [str(email) for email in now_values.pop("emails")]

@@ -39,6 +39,15 @@ async def search_contacts(
     )
 
 
+@router.get("/{contact_id}", response_model=ContactResponse)
+async def get_contact(
+    contact_id: UUID,
+    _actor: UserDocument = Depends(require_current_user),
+    service: ContactService = Depends(contact_service),
+) -> ContactResponse:
+    return await service.get(contact_id)
+
+
 @router.post("", response_model=ContactResponse, status_code=status.HTTP_201_CREATED)
 async def create_contact(
     payload: ContactCreate,

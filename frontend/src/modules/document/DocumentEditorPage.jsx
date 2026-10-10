@@ -14,6 +14,7 @@ import {
 } from '../../core/api.js';
 import { createCollaborativeDocument } from '../../core/collaboration/yjsTransport.js';
 import LetterAssistancePanel from '../automation/components/LetterAssistancePanel.jsx';
+import RecipientContactFields from '../contact/components/RecipientContactFields.jsx';
 
 const CodeMirror = lazy(() => import('@uiw/react-codemirror'));
 const PdfPreview = lazy(() => import('./components/PdfPreview.jsx'));
@@ -534,7 +535,7 @@ export default function DocumentEditorPage() {
                 </form>
               )}
             </div>
-            <RecipientFields label="Destinatario" onChange={(value) => handlePartyChange('recipient', value)} prefix="recipient" value={fields?.recipient || emptyFields().recipient} />
+            <RecipientContactFields csrfToken={csrfToken} onChange={(value) => handlePartyChange('recipient', value)} value={fields?.recipient || emptyFields().recipient} />
             <RecipientFields label="Remitente" onChange={(value) => handlePartyChange('sender', value)} prefix="sender" value={fields?.sender || emptyFields().sender} />
             <label className="editor-field">
               <span>Saludo</span>

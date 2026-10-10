@@ -37,6 +37,14 @@ def test_letter_assistance_routes_require_a_privacy_preview_and_decisions():
         "post"
         in paths["/api/documents/{document_id}/suggestions/{suggestion_id}/accept"]
     )
+
+
+def test_contact_directory_supports_selected_record_reload():
+    paths = app.openapi()["paths"]
+    assert "get" in paths["/api/contacts"]
+    assert "post" in paths["/api/contacts"]
+    assert "get" in paths["/api/contacts/{contact_id}"]
+    assert "patch" in paths["/api/contacts/{contact_id}"]
     assert (
         "post"
         in paths["/api/documents/{document_id}/suggestions/{suggestion_id}/reject"]

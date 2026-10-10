@@ -203,6 +203,17 @@ state visibly keeps each proposal separate and requires explicit per-item
 acceptance; no automatic apply-all control is present. Agent-based finish
 review could not run because the session's subagent thread limit was reached.
 
+### T19 recipient quick editing UI
+
+The same pinned Impeccable Operate surface brief was used to extend the
+recipient fields without changing the editor's existing visual direction. One
+`detect --json` run on the recipient component, its stylesheet, and the editor
+completed with no findings (`[]`). Synthetic system-Chromium checks covered
+contact autocomplete, keyboard selection, inline update, focus restoration,
+mobile layout, and confirmation that editing the shared directory leaves the
+current letter snapshot unchanged. A separate finish-review subagent was not
+available because the session thread limit had been reached during T18.
+
 Review actual task behavior on desktop and narrow screens, inspect code, and
 verify accessibility/performance. Preserve agreed product/design context across
 tasks. Impeccable guidance never overrides signature privacy or product rules.

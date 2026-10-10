@@ -53,6 +53,7 @@ payload returns the original result; same key with a different payload returns
 | GET /events/{id} | none | authenticated event details for retained document references |
 | POST /events | name, year | authenticated; immutable normalized slug, duplicate conflicts |
 | GET /contacts | q?, role?, institution?, career?, include_inactive?, pagination | authenticated shared directory; exact role/career/institution filters precede text matching |
+| GET /contacts/{id} | none | current shared contact revision for conflict recovery |
 | POST /contacts | typed contact | create validated contact |
 | PATCH /contacts/{id} | fields, expected_revision | quick edit/deactivate; conflict-safe; no hard-delete endpoint |
 | POST /contacts/import | connection_id | approved Google Contacts import job; P-05 |

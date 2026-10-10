@@ -1,0 +1,18 @@
+.recipient-contact-fields { position: relative; }
+.recipient-contact-fields__name { position: relative; }
+.recipient-contact-fields__results { position: absolute; z-index: 5; top: calc(100% + 4px); right: 0; left: 0; display: grid; gap: 2px; max-height: 240px; overflow: auto; margin: 0; padding: 5px; border: 1px solid var(--color-line); border-radius: var(--radius-control); background: var(--color-paper); box-shadow: 0 8px 22px #211c241f; list-style: none; }
+.recipient-contact-fields__results button { display: grid; width: 100%; gap: 3px; padding: 9px 10px; border: 0; border-radius: 4px; background: transparent; color: var(--color-ink); text-align: left; cursor: pointer; }
+.recipient-contact-fields__results button:hover, .recipient-contact-fields__results [aria-selected="true"] button { background: #f4f1ef; }
+.recipient-contact-fields__results button:focus-visible { outline: 2px solid var(--color-institutional); outline-offset: -2px; }
+.recipient-contact-fields__results span { color: var(--color-muted); font-size: .8rem; }
+.recipient-contact-fields__actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.recipient-contact-fields__pencil { width: 14px; height: 14px; margin-right: 6px; vertical-align: -2px; }
+.recipient-contact-fields__form { grid-column: 1 / -1; display: grid; gap: 12px; padding-top: 12px; border-top: 1px solid var(--color-line); }
+.recipient-contact-fields__form > p { margin: 0; color: var(--color-muted); font-size: .82rem; }
+.recipient-contact-fields__error, .recipient-contact-fields__status { grid-column: 1 / -1; margin: 0; font-size: .82rem; }
+.recipient-contact-fields__error { color: #a40000; }
+.recipient-contact-fields__status { color: #365f4b; }
+@media (max-width: 600px) {
+  .recipient-contact-fields__results { max-height: min(240px, 35vh); }
+  .recipient-contact-fields__actions > button { min-height: 42px; }
+}
