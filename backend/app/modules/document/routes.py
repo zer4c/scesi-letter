@@ -8,6 +8,7 @@ from app.core.database import get_mongo_client
 from app.modules.auth.documents import UserDocument
 from app.modules.auth.routes import auth_service, require_current_user
 from app.modules.auth.services import AuthService
+from app.modules.collaboration.services import CollaborationService
 from app.modules.document.markdown_source import InvalidMarkdownSource
 from app.modules.document.jobs import ArtifactService
 from app.modules.document.pdf_renderer import InvalidMarkdown, RenderLimitExceeded
@@ -81,6 +82,21 @@ async def save_document(
 ) -> DocumentSaveResponse:
     auth.require_csrf_header(request)
     return await service.save(document_id, payload, actor, client)
+
+
+@router.post("/{document_id}/checkpoint", response_model=DocumentSummary)
+async def checkpoint_document(
+    document_id: UUID,
+    request: Request,
+    actor: UserDocument = Depends(require_current_user),
+    service: DocumentService = Depends(document_service),
+    auth: AuthService = Depends(auth_service),
+    client: AsyncMongoClient = Depends(get_mongo_client),
+) -> DocumentSummary:
+    auth.require_csrf_header(request)
+    collaboration: CollaborationService = request.app.state.collaboration_service
+    await collaboration.checkpoint_now(document_id, actor)
+    return await service.get_document(document_id, actor)
 
 
 @router.get("/{document_id}/versions", response_model=list[DocumentVersionSummary])

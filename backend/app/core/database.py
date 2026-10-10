@@ -30,10 +30,11 @@ from app.modules.document.documents import (
     LetterCounterDocument,
     LetterDocument,
 )
+from app.modules.event.documents import EventDocument
 from app.modules.template.documents import TemplateDocument
 
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 
 def create_mongo_client(settings: Settings) -> AsyncMongoClient:
@@ -96,6 +97,7 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
             LoginAttemptDocument,
             SessionDocument,
             SchemaMigrationDocument,
+            EventDocument,
         ],
     )
 
@@ -109,6 +111,7 @@ async def initialize_persistence(database: AsyncDatabase) -> None:
         3: "default_template_revisions",
         4: "document_versioned_source",
         5: "durable_collaboration_state",
+        6: "academic_events",
     }
     migration_collection = SchemaMigrationDocument.get_pymongo_collection()
     for version, name in migrations.items():

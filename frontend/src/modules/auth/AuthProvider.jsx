@@ -58,12 +58,13 @@ export function AuthProvider({ children }) {
   const value = useMemo(() => ({
     status,
     user,
+    csrfToken,
     sessionIssue,
     signIn,
     signOut,
     restore,
     expireSession,
-  }), [status, user, sessionIssue, signIn, signOut, restore, expireSession]);
+  }), [status, user, csrfToken, sessionIssue, signIn, signOut, restore, expireSession]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

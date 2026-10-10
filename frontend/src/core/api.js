@@ -56,6 +56,47 @@ export const redeemInvitation = (token, displayName, password) => request(
 );
 
 export const listDocuments = () => request('/api/documents?page=1&page_size=25');
+export const listEvents = (year) => request(`/api/events?year=${encodeURIComponent(year)}`);
+export const getEvent = (id) => request(`/api/events/${id}`);
+
+export const createEvent = (payload, csrfToken) => request('/api/events', {
+  method: 'POST',
+  headers: { 'X-CSRF-Token': csrfToken },
+  body: JSON.stringify(payload),
+});
+
+export const getDocument = (id) => request(`/api/documents/${id}`);
+
+export const createDocument = (payload, csrfToken) => request('/api/documents', {
+  method: 'POST',
+  headers: { 'X-CSRF-Token': csrfToken },
+  body: JSON.stringify(payload),
+});
+
+export const saveDocument = (id, payload, csrfToken) => request(`/api/documents/${id}/save`, {
+  method: 'POST',
+  headers: { 'X-CSRF-Token': csrfToken },
+  body: JSON.stringify(payload),
+});
+
+export const checkpointDocument = (id, csrfToken) => request(`/api/documents/${id}/checkpoint`, {
+  method: 'POST',
+  headers: { 'X-CSRF-Token': csrfToken },
+});
+
+export async function renderDocumentPreview(markdown) {
+  const response = await fetch('/api/documents/preview', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ markdown }),
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    throw new ApiError(response.status, payload?.error?.code || payload?.detail);
+  }
+  return URL.createObjectURL(await response.blob());
+}
 
 export function listAutomations() {
   return request('/api/automations');

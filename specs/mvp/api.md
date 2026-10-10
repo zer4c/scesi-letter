@@ -48,6 +48,9 @@ payload returns the original result; same key with a different payload returns
 | GET /template | none | single current template with public settings |
 | PATCH /template | settings, expected_revision | new immutable template revision; admin |
 | POST /documents/preview | Markdown source | transient unsigned PDF; authenticated, no persistence or signature |
+| GET /events | year?, pagination | authenticated event IDs and display names |
+| GET /events/{id} | none | authenticated event details for retained document references |
+| POST /events | name, year | authenticated; immutable normalized slug, duplicate conflicts |
 | GET /contacts | q?, role?, institution?, career?, include_inactive?, pagination | authenticated shared directory; exact role/career/institution filters precede text matching |
 | POST /contacts | typed contact | create validated contact |
 | PATCH /contacts/{id} | fields, expected_revision | quick edit/deactivate; conflict-safe; no hard-delete endpoint |
@@ -60,6 +63,7 @@ payload returns the original result; same key with a different payload returns
 | POST /documents/{id}/participants | user_id | creator/admin policy |
 | DELETE /documents/{id}/participants/{user_id} | none | revoke access, not document deletion |
 | POST /documents/{id}/save | expected_revision, expected_source_hash | allocate if needed, checkpoint; version/job refs |
+| POST /documents/{id}/checkpoint | CSRF | persist current authorized Yjs room snapshot without numbering an unnumbered draft |
 | GET /documents/{id}/versions | none | immutable version summaries; authorized participant |
 | GET /documents/{id}/versions/{version_id} | none | immutable metadata/status; authorized participant |
 | GET /documents/{id}/versions/{version_id}/pdf | none | scoped binary PDF |

@@ -38,6 +38,7 @@ from app.modules.document.schemas import (
     LetterFields,
     LetterMetadata,
 )
+from app.modules.event.documents import EventDocument
 from app.modules.template.repositories import TemplateRepository
 from app.modules.template.schemas import TemplateSettings
 
@@ -85,6 +86,11 @@ class DocumentService:
         self._jobs = ExportJobRepository()
         self._templates = TemplateRepository()
 
+    @staticmethod
+    async def _validate_event(event_id: UUID | None) -> None:
+        if event_id is not None and await EventDocument.find_one(EventDocument.id == event_id) is None:
+            raise HTTPException(status_code=422, detail="VALIDATION_ERROR")
+
     async def create_draft(
         self,
         payload: DocumentCreate,
@@ -93,16 +99,15 @@ class DocumentService:
         template = await self._templates.get_active()
         if template is None:
             raise HTTPException(status_code=503, detail="INTERNAL_ERROR")
-        if not payload.body.strip():
-            raise HTTPException(status_code=422, detail="VALIDATION_ERROR")
         metadata = self._metadata(payload.metadata, None, template.revision)
+        await self._validate_event(metadata.event_id)
         _, source_hash = calculate_source_hash(metadata, payload.body)
         document = LetterDocument(
             owner_id=actor.id,
             participant_ids=[],
             document_type=metadata.document_type,
             metadata=metadata,
-            body=payload.body.strip(),
+            body=payload.body,
             source_hash=source_hash,
         )
         await self._documents.insert(document)
@@ -220,8 +225,6 @@ class DocumentService:
         if document is None:
             raise HTTPException(status_code=404, detail="NOT_FOUND")
         self._authorize(document, actor)
-        if not body.strip():
-            raise HTTPException(status_code=422, detail="VALIDATION_ERROR")
         fields = LetterFields.model_validate(
             metadata.model_dump(mode="python", exclude={"identifier", "template_revision"})
         )
@@ -230,6 +233,7 @@ class DocumentService:
             document.identifier,
             document.metadata.template_revision or 1,
         )
+        await self._validate_event(canonical_metadata.event_id)
         _, source_hash = calculate_source_hash(canonical_metadata, body.strip())
         if source_hash == document.source_hash:
             return
@@ -328,6 +332,7 @@ class DocumentService:
                 identifier,
                 document.metadata.template_revision,
             )
+            await self._validate_event(metadata.event_id)
             markdown, source_hash = calculate_source_hash(metadata, payload.body)
             if document.current_version is not None and source_hash == document.source_hash:
                 current_version = await self._versions.get_by_id(

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
-import { ApiError, listDocuments } from '../../core/api.js';
+import { ApiError, createDocument, listDocuments } from '../../core/api.js';
 import { useAuth } from '../auth/AuthProvider.jsx';
 
 const documentTypeNames = {
@@ -24,9 +24,10 @@ export default function DocumentListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retryKey, setRetryKey] = useState(0);
-  const { expireSession } = useAuth();
+  const { expireSession, csrfToken } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -52,6 +53,30 @@ export default function DocumentListPage() {
     return () => { active = false; };
   }, [expireSession, location, navigate, retryKey]);
 
+  const handleCreate = async () => {
+    setCreating(true);
+    setError('');
+    const now = new Date();
+    const date = new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
+      .toISOString().slice(0, 10);
+    try {
+      const document = await createDocument({
+        metadata: { document_type: 'SOL', date },
+        body: '',
+      }, csrfToken);
+      navigate(`/documents/${document.id}`);
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) {
+        expireSession();
+        navigate('/login', { replace: true, state: { expired: true, from: location } });
+      } else {
+        setError('No se pudo crear el borrador. Inténtalo de nuevo.');
+      }
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <section className="document-page" aria-labelledby="documents-title">
       <div className="page-heading">
@@ -59,6 +84,9 @@ export default function DocumentListPage() {
           <h1 id="documents-title">Cartas</h1>
           <p className="page-heading__intro">Correspondencia académica de tu comunidad.</p>
         </div>
+        <button className="button-primary" disabled={creating} onClick={handleCreate} type="button">
+          {creating ? 'Creando borrador…' : 'Nueva carta'}
+        </button>
       </div>
 
       {loading && <p className="inline-status" role="status">Cargando cartas…</p>}
@@ -81,7 +109,7 @@ export default function DocumentListPage() {
             <li className="document-list__item" key={document.id}>
               <div className="document-list__main">
                 <span className="document-list__type">{documentTypeNames[document.document_type] || 'Carta'}</span>
-                <h2>{document.topic || document.recipient_name || 'Sin asunto'}</h2>
+                <h2><Link className="document-list__link" to={`/documents/${document.id}`}>{document.topic || document.recipient_name || 'Sin asunto'}</Link></h2>
                 <p>{document.recipient_name ? `Destinatario: ${document.recipient_name}` : 'Destinatario pendiente'}</p>
               </div>
               <div className="document-list__meta">

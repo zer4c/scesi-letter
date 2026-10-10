@@ -7,6 +7,7 @@ import * as Y from 'yjs';
 
 const MESSAGE_SYNC = 0;
 const MESSAGE_AWARENESS = 1;
+const MESSAGE_SYNC_UPDATE = 2;
 const MAX_FRAME_BYTES = 1024 * 1024;
 
 export function createCollaborativeDocument({
@@ -14,6 +15,9 @@ export function createCollaborativeDocument({
   csrfToken,
   onStatusChange = () => {},
   onAwarenessChange = () => {},
+  onSynced = () => {},
+  onLocalUpdate = () => {},
+  onUpdatePersisted = () => {},
   onError = () => {},
 }) {
   const document = new Y.Doc();
@@ -52,6 +56,7 @@ export function createCollaborativeDocument({
       reconnectAttempt = 0;
       onStatusChange('connected');
       const encoder = encoding.createEncoder();
+      encoding.writeVarUint(encoder, MESSAGE_SYNC);
       syncProtocol.writeSyncStep1(encoder, document);
       send(encoding.toUint8Array(encoder));
     });
@@ -68,7 +73,9 @@ export function createCollaborativeDocument({
         if (messageType === MESSAGE_SYNC) {
           const encoder = encoding.createEncoder();
           encoding.writeVarUint(encoder, MESSAGE_SYNC);
-          syncProtocol.readSyncMessage(decoder, encoder, document, socket);
+          const syncType = syncProtocol.readSyncMessage(decoder, encoder, document, socket);
+          if (syncType === syncProtocol.messageYjsSyncStep2) onSynced();
+          if (syncType === MESSAGE_SYNC_UPDATE) onUpdatePersisted();
           if (encoding.length(encoder) > 1) send(encoding.toUint8Array(encoder));
         } else if (messageType === MESSAGE_AWARENESS) {
           awarenessProtocol.applyAwarenessUpdate(
@@ -105,6 +112,7 @@ export function createCollaborativeDocument({
 
   document.on('update', (update, origin) => {
     if (origin === socket) return;
+    onLocalUpdate();
     const encoder = encoding.createEncoder();
     encoding.writeVarUint(encoder, MESSAGE_SYNC);
     syncProtocol.writeUpdate(encoder, update);

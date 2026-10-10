@@ -21,7 +21,7 @@ class LetterDocument(StrictDocument):
     identifier: str | None = None
     identifier_year: int | None = None
     metadata: LetterMetadata
-    body: str = Field(min_length=1, max_length=100_000)
+    body: str = Field(max_length=100_000)
     draft_revision: int = Field(default=1, ge=1)
     source_hash: str = Field(min_length=64, max_length=64)
     current_version: UUID | None = None

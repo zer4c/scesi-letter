@@ -88,6 +88,21 @@ class CollaborationService:
             self._rooms[document.id] = room
             return room
 
+    async def checkpoint_now(self, document_id: UUID, actor: UserDocument) -> None:
+        room = self._rooms.get(document_id)
+        if room is None:
+            return
+        async with room.lock:
+            snapshot = self._empty_document()
+            snapshot.apply_update(room.ydoc.get_update())
+        await DocumentService().checkpoint_collaborative(
+            document_id,
+            self._parse_metadata(snapshot),
+            str(snapshot["body"]),
+            actor,
+            self._client,
+        )
+
     async def add_client(
         self,
         room: CollaborationRoom,
@@ -290,7 +305,7 @@ class CollaborationService:
         except Exception as error:
             raise InvalidCollaborationMessage("Document metadata is invalid") from error
 
-        if not body.strip() or len(body) > MAX_DOCUMENT_BODY:
+        if len(body) > MAX_DOCUMENT_BODY:
             raise InvalidCollaborationMessage("Document body limit exceeded")
         if document.identifier is not None and (
             metadata.identifier not in {None, document.identifier}
@@ -306,6 +321,13 @@ class CollaborationService:
     def _parse_metadata(ydoc: Doc) -> LetterMetadata:
         raw_metadata = dict(ydoc["metadata"])
         for key in ("recipient", "sender"):
+            partial_party = {}
+            for field in ("name", "role", "institution", "career", "email"):
+                map_key = f"{key}_{field}"
+                if map_key in raw_metadata:
+                    partial_party[field] = raw_metadata.pop(map_key)
+            if partial_party:
+                raw_metadata[key] = partial_party if partial_party.get("name", "").strip() else None
             value = raw_metadata.get(key)
             if isinstance(value, str):
                 raw_metadata[key] = json.loads(value)

@@ -55,7 +55,7 @@ class DocumentCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     metadata: LetterFields
-    body: str = Field(min_length=1, max_length=100_000)
+    body: str = Field(max_length=100_000)
 
 
 class DocumentSave(BaseModel):

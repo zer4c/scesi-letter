@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-10T10:48:05Z",
+  "generatedAt": "2026-10-10T11:07:01Z",
   "title": "Design System: SCESI Letter",
   "extensions": {
     "colorMeta": {
@@ -20,10 +20,12 @@
       "body": { "displayName": "Body", "purpose": "Default text and everyday controls." },
       "headline": { "displayName": "Access Display", "purpose": "Large identity statement in the access panel." },
       "title": { "displayName": "Page Title", "purpose": "Access form heading." },
-      "label": { "displayName": "Form Label", "purpose": "Field labels and semibold control text." }
+      "label": { "displayName": "Form Label", "purpose": "Field labels and semibold control text." },
+      "button": { "displayName": "Button", "purpose": "Primary and workspace action text." }
     },
     "shadows": [
-      { "name": "focus-ring", "value": "0 0 0 3px rgb(164 0 0 / 18%)", "purpose": "Text field focus treatment." }
+      { "name": "focus-ring", "value": "0 0 0 3px rgb(164 0 0 / 18%)", "purpose": "Text field focus treatment." },
+      { "name": "pdf-page", "value": "0 2px 8px rgb(37 36 58 / 16%)", "purpose": "Subtle separation around each page in the document preview." }
     ],
     "motion": [
       { "name": "control-transition", "value": "140ms ease-out", "purpose": "Button and field interaction states." },
@@ -31,6 +33,7 @@
     ],
     "breakpoints": [
       { "name": "navigation-reflow", "value": "900px" },
+      { "name": "editor-tabs", "value": "900px" },
       { "name": "mobile-stack", "value": "680px" }
     ]
   },
@@ -41,7 +44,7 @@
       "refersTo": "button-primary",
       "description": "Main form action for sign-in and invitation acceptance.",
       "html": "<button class=\"ds-button-primary\" type=\"button\">Ingresar</button>",
-      "css": ".ds-button-primary { min-height: 50px; padding: 12px 18px; border: 1px solid var(--color-institutional); border-radius: 7px; background: var(--color-institutional); color: #fff; cursor: pointer; font: 600 0.93rem/1.55 'Onest Variable', 'Segoe UI', sans-serif; transition: background 140ms ease-out, border-color 140ms ease-out, transform 140ms ease-out; } .ds-button-primary:hover { transform: translateY(-1px); border-color: var(--color-institutional-dark); background: var(--color-institutional-dark); } .ds-button-primary:active { transform: translateY(0); } .ds-button-primary:focus-visible { outline: 3px solid #6e0000; outline-offset: 3px; }"
+      "css": ".ds-button-primary { min-height: 50px; padding: 12px 18px; border: 1px solid var(--color-institutional); border-radius: 7px; background: var(--color-institutional); color: #fff; cursor: pointer; font: 650 0.93rem/1.55 'Onest Variable', 'Segoe UI', sans-serif; transition: background 140ms ease-out, border-color 140ms ease-out, transform 140ms ease-out; } .ds-button-primary:hover:not(:disabled) { transform: translateY(-1px); border-color: var(--color-institutional-dark); background: var(--color-institutional-dark); } .ds-button-primary:active:not(:disabled) { transform: translateY(0); } .ds-button-primary:focus-visible { outline: 3px solid #6e0000; outline-offset: 3px; } .ds-button-primary:disabled { cursor: wait; opacity: 0.7; }"
     },
     {
       "name": "Text Field",
@@ -74,11 +77,35 @@
       "description": "Compact error or information message in access and workspace flows.",
       "html": "<p class=\"ds-notice ds-notice--info\" role=\"status\">Tu cuenta está lista. Inicia sesión para continuar.</p>",
       "css": ".ds-notice { margin: 0 0 22px; padding: 12px 14px; border-radius: 7px; font: 400 0.92rem/1.5 'Onest Variable', 'Segoe UI', sans-serif; } .ds-notice--info { background: var(--color-info-ground); color: var(--color-info); } .ds-notice--error { background: var(--color-error-ground); color: var(--color-error); }"
+    },
+    {
+      "name": "Compact Editor Field",
+      "kind": "input",
+      "refersTo": "input-compact",
+      "description": "Labeled structured metadata entry in the document editor.",
+      "html": "<label class=\"ds-editor-field\"><span>Asunto</span><input class=\"ds-editor-input\" /></label>",
+      "css": ".ds-editor-field { display: grid; gap: 6px; color: var(--color-ink); font: 600 0.85rem/1.55 'Onest Variable', 'Segoe UI', sans-serif; } .ds-editor-input { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid #9b999e; border-radius: 7px; background: var(--color-paper); color: var(--color-ink); font: 400 0.9rem/1.55 'Onest Variable', 'Segoe UI', sans-serif; } .ds-editor-input:focus { border-color: var(--color-institutional); box-shadow: 0 0 0 3px rgb(164 0 0 / 18%); outline: none; } .ds-editor-input:focus-visible { outline: 3px solid #6e0000; outline-offset: 3px; }"
+    },
+    {
+      "name": "Workspace Save Button",
+      "kind": "button",
+      "refersTo": "button-workspace",
+      "description": "Explicit save action for a synchronized academic letter draft.",
+      "html": "<button class=\"ds-workspace-save\" type=\"button\">Guardar</button>",
+      "css": ".ds-workspace-save { min-height: 44px; padding: 9px 17px; border: 1px solid var(--color-institutional); border-radius: 7px; background: var(--color-institutional); color: var(--color-paper); cursor: pointer; font: 650 0.93rem/1.55 'Onest Variable', 'Segoe UI', sans-serif; transition: background 140ms ease-out, border-color 140ms ease-out, transform 140ms ease-out; } .ds-workspace-save:hover:not(:disabled) { transform: translateY(-1px); border-color: var(--color-institutional-dark); background: var(--color-institutional-dark); } .ds-workspace-save:active:not(:disabled) { transform: translateY(0); } .ds-workspace-save:focus-visible { outline: 3px solid #6e0000; outline-offset: 3px; } .ds-workspace-save:disabled { cursor: wait; opacity: 0.7; }"
+    },
+    {
+      "name": "Document Editor Panel",
+      "kind": "card",
+      "refersTo": "editor-panel",
+      "description": "White bordered container for editor fields or PDF preview.",
+      "html": "<section class=\"ds-editor-panel\"><h2>Datos de la carta</h2><p>Contenido del espacio de trabajo</p></section>",
+      "css": ".ds-editor-panel { min-width: 0; border: 1px solid var(--color-line); border-radius: 12px; background: var(--color-paper); color: var(--color-ink); } .ds-editor-panel h2 { margin: 0; font: 650 1.07rem/1.4 'Onest Variable', 'Segoe UI', sans-serif; } .ds-editor-panel p { color: var(--color-muted); font: 400 0.9rem/1.55 'Onest Variable', 'Segoe UI', sans-serif; }"
     }
   ],
   "narrative": {
     "northStar": "Geometría institucional",
-    "overview": "The shipped access and navigation slice uses a clear institutional frame: a broad red identity field beside a quiet white form, followed after sign-in by a light workspace shell. Onest carries both prominent Spanish headings and everyday controls. The supplied SCESI and university marks remain the authority for institutional identity; the application adds only a small crossing-line pennant cue.\n\nThis record describes the implemented T11 access and navigation surface. The broader product design remains open for the user’s manual refinement; this document does not settle future editor, document, or organization surfaces.",
+    "overview": "The established T11 access and navigation system and shipped T12 document-editor extension use a clear institutional frame: a broad red identity field beside a quiet white form, followed after sign-in by a light workspace shell. The editor reuses the workspace palette, Onest typography, focus treatment, and restrained geometry, adding compact metadata fields, paired authoring and preview panels, and a narrow-screen edit/preview switch. The supplied SCESI and university marks remain the authority for institutional identity; the application adds only a small crossing-line pennant cue.\n\nThese editor details describe the current implementation rather than a durable redesign. Broader visual refinement remains open for later manual work.",
     "keyCharacteristics": [
       "Institutional red anchors identity, actions, and active navigation.",
       "Warm gray grounds the workspace; white carries focused content.",
@@ -99,7 +126,7 @@
     "donts": [
       "Don't recreate the academic PDF header in application chrome.",
       "Don't add emoji or substitute glyph icons for the approved icon approach.",
-      "Don't treat the current access layout as a settled direction for the broader product; future visual refinement remains open."
+      "Don't treat the current implementation as a final visual settlement; broader refinement remains open for later manual work."
     ]
   }
 }
