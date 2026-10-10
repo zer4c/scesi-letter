@@ -50,6 +50,11 @@ def test_gmail_dispatch_and_scoped_job_status_routes_exist():
     paths = app.openapi()["paths"]
     assert "post" in paths["/api/mail/send"]
     assert "get" in paths["/api/jobs/{job_id}"]
+
+
+def test_selected_version_can_be_finalized_explicitly():
+    paths = app.openapi()["paths"]
+    assert "post" in paths["/api/documents/{document_id}/versions/{version_id}/finalize"]
     assert (
         "post"
         in paths["/api/documents/{document_id}/suggestions/{suggestion_id}/reject"]

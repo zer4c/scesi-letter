@@ -20,6 +20,7 @@ from app.modules.document.schemas import (
     DocumentSummary,
     DocumentVersionDetail,
     DocumentVersionSummary,
+    FinalizeVersionRequest,
     JobStatusResponse,
     RenderRequest,
 )
@@ -120,6 +121,32 @@ async def get_document_version(
     service: DocumentService = Depends(document_service),
 ) -> DocumentVersionDetail:
     return await service.get_version(document_id, version_id, actor)
+
+
+@router.post(
+    "/{document_id}/versions/{version_id}/finalize",
+    response_model=DocumentVersionDetail,
+)
+async def finalize_document_version(
+    document_id: UUID,
+    version_id: UUID,
+    payload: FinalizeVersionRequest,
+    request: Request,
+    actor: UserDocument = Depends(require_current_user),
+    service: DocumentService = Depends(document_service),
+    auth: AuthService = Depends(auth_service),
+    settings: Settings = Depends(get_settings),
+    client: AsyncMongoClient = Depends(get_mongo_client),
+) -> DocumentVersionDetail:
+    auth.require_csrf_header(request)
+    return await service.finalize_version(
+        document_id,
+        version_id,
+        payload.expected_pdf_hash,
+        actor,
+        settings,
+        client,
+    )
 
 
 @router.get("/{document_id}/versions/{version_id}/pdf")

@@ -88,6 +88,35 @@ export const createEvent = (payload, csrfToken) => request('/api/events', {
 });
 
 export const getDocument = (id) => request(`/api/documents/${id}`);
+export const listDocumentVersions = (id) => request(`/api/documents/${id}/versions`);
+export const getDocumentVersion = (id, versionId) => request(`/api/documents/${id}/versions/${versionId}`);
+export const getArchiveStatus = (id, versionId) => request(`/api/documents/${id}/versions/${versionId}/archive`);
+export const getJobStatus = (jobId) => request(`/api/jobs/${jobId}`);
+export const listConnections = () => request('/api/integrations');
+
+export const finalizeDocumentVersion = (id, versionId, expectedPdfHash, csrfToken) => request(
+  `/api/documents/${id}/versions/${versionId}/finalize`,
+  {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': csrfToken },
+    body: JSON.stringify({ expected_pdf_hash: expectedPdfHash }),
+  },
+);
+
+export const syncArchivedVersion = (id, versionId, payload, csrfToken) => request(
+  `/api/documents/${id}/versions/${versionId}/sync`,
+  {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': csrfToken },
+    body: JSON.stringify(payload),
+  },
+);
+
+export const sendDocumentMail = (payload, idempotencyKey, csrfToken) => request('/api/mail/send', {
+  method: 'POST',
+  headers: { 'X-CSRF-Token': csrfToken, 'Idempotency-Key': idempotencyKey },
+  body: JSON.stringify(payload),
+});
 
 export const createDocument = (payload, csrfToken) => request('/api/documents', {
   method: 'POST',

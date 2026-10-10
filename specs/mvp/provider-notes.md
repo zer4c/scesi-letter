@@ -217,3 +217,18 @@ available because the session thread limit had been reached during T18.
 Review actual task behavior on desktop and narrow screens, inspect code, and
 verify accessibility/performance. Preserve agreed product/design context across
 tasks. Impeccable guidance never overrides signature privacy or product rules.
+
+### T22 version finalization and mail composer
+
+The editor surface brief was followed without changing the broader product
+direction. The composer shows the selected immutable version and PDF hash,
+supports explicit unsigned/signed finalization, exact-version download and Drive
+link, sender/To/CC/BCC, and a final confirmation. A lost enqueue response keeps
+the same idempotency key and payload for explicit recovery; an unknown provider
+outcome requires the sender to check Gmail before preparing another message.
+Synthetic desktop/mobile browser checks covered the confirmation/send flow and
+responsive overflow. Screenshots remain local review artifacts. The single
+Impeccable detector run returned no findings (`[]`). Backend suite: 41 passed,
+2 skipped; isolated MongoDB/Gmail-mock integration: 1 passed; frontend build and
+both focused test suites passed. No real Gmail send was attempted. Agent-based
+finish review remained unavailable because the session thread limit was reached.

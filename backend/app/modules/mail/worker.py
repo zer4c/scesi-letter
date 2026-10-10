@@ -163,6 +163,14 @@ class MailDispatchWorker:
             self._settings,
         )
         payload = MailDispatchRequest.model_validate_json(raw_payload)
+        if (
+            payload.document_id != job.document_id
+            or payload.version_id != job.version_id
+            or payload.connection_id != job.connection_id
+            or not payload.confirmed
+        ):
+            await self._finish(job, "failed", "MAIL_PAYLOAD_INVALID")
+            return
         document = await LetterDocument.find_one(LetterDocument.id == job.document_id)
         version = await DocumentVersionDocument.find_one(
             DocumentVersionDocument.id == job.version_id,

@@ -38,6 +38,7 @@ from app.modules.document.schemas import (
     LetterFields,
     LetterMetadata,
 )
+from app.modules.document.storage import ArtifactStore
 from app.modules.event.documents import EventDocument
 from app.modules.template.repositories import TemplateRepository
 from app.modules.template.schemas import TemplateSettings
@@ -196,6 +197,68 @@ class DocumentService:
             finalized_at=version.finalized_at,
             signature_owner_id=version.signature_owner_id,
         )
+
+    async def finalize_version(
+        self,
+        document_id: UUID,
+        version_id: UUID,
+        expected_pdf_hash: str,
+        actor: UserDocument,
+        settings: Settings,
+        client: AsyncMongoClient,
+    ) -> DocumentVersionDetail:
+        document = await self._documents.get_by_id(document_id)
+        version = await self._versions.get_by_id(document_id, version_id)
+        if document is None or version is None:
+            raise HTTPException(status_code=404, detail="NOT_FOUND")
+        self._authorize(document, actor)
+        if (
+            version.status not in {"ready", "archived"}
+            or version.pdf_hash is None
+            or not hmac.compare_digest(version.pdf_hash, expected_pdf_hash)
+        ):
+            raise HTTPException(status_code=409, detail="CONFLICT")
+        try:
+            ArtifactStore(settings.ARTIFACT_ROOT).read_verified(
+                document.id, version.id, "letter.pdf", expected_pdf_hash
+            )
+        except (FileNotFoundError, OSError) as error:
+            raise HTTPException(status_code=503, detail="PDF_ARTIFACT_UNAVAILABLE") from error
+
+        now = datetime.now(UTC)
+        async with transaction(client) as session:
+            current_actor = await UserDocument.find_one(
+                UserDocument.id == actor.id,
+                UserDocument.active == True,
+                session=session,
+            )
+            current_document = await LetterDocument.find_one(
+                LetterDocument.id == document_id,
+                session=session,
+            )
+            current_version = await DocumentVersionDocument.find_one(
+                DocumentVersionDocument.id == version_id,
+                DocumentVersionDocument.document_id == document_id,
+                session=session,
+            )
+            if (
+                current_actor is None
+                or current_document is None
+                or current_version is None
+                or current_version.status not in {"ready", "archived"}
+                or current_version.pdf_hash is None
+                or not hmac.compare_digest(current_version.pdf_hash, expected_pdf_hash)
+            ):
+                raise HTTPException(status_code=409, detail="CONFLICT")
+            self._authorize(current_document, current_actor)
+            if current_version.finalized_at is None:
+                current_version.finalized_at = now
+                await current_version.save(session=session)
+            current_document.finalized_version_id = version_id
+            current_document.updated_at = now
+            await current_document.save(session=session)
+
+        return await self.get_version(document_id, version_id, actor)
 
     async def save(
         self,
@@ -441,6 +504,7 @@ class DocumentService:
             draft_revision=document.draft_revision,
             source_hash=document.source_hash,
             current_version=document.current_version,
+            finalized_version_id=document.finalized_version_id,
             identifier_year=document.identifier_year,
             created_at=document.created_at,
         )

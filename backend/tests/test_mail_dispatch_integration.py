@@ -11,6 +11,7 @@ from uuid import uuid4
 
 import httpx
 import pytest
+from fastapi import HTTPException
 from pydantic import SecretStr
 from pymongo import AsyncMongoClient
 
@@ -19,6 +20,7 @@ from app.core.database import initialize_persistence
 from app.modules.auth.documents import UserDocument
 from app.modules.document.documents import DocumentVersionDocument, LetterDocument
 from app.modules.document.schemas import LetterMetadata
+from app.modules.document.services import DocumentService
 from app.modules.document.storage import ArtifactStore
 from app.modules.integration.documents import (
     DriveArchiveMappingDocument,
@@ -84,7 +86,6 @@ def test_mail_jobs_are_idempotent_pdf_only_and_timeouts_are_not_retried(tmp_path
                 source_hash="b" * 64,
                 current_version=version_id,
                 latest_version_number=1,
-                finalized_version_id=version_id,
             )
             await document.insert()
             version = DocumentVersionDocument(
@@ -98,11 +99,26 @@ def test_mail_jobs_are_idempotent_pdf_only_and_timeouts_are_not_retried(tmp_path
                 source_hash="b" * 64,
                 md_hash=md_hash,
                 pdf_hash=pdf_hash,
-                status="archived",
-                finalized_at=now,
+                status="ready",
                 created_by=actor.id,
             )
             await version.insert()
+            ArtifactStore(settings.ARTIFACT_ROOT).write_immutable(
+                document.id, version.id, "letter.pdf", pdf_bytes, pdf_hash
+            )
+            finalizer = DocumentService()
+            finalized = await finalizer.finalize_version(
+                document.id, version.id, pdf_hash, actor, settings, client
+            )
+            assert finalized.finalized_at is not None
+            with pytest.raises(HTTPException) as stale_hash:
+                await finalizer.finalize_version(
+                    document.id, version.id, "d" * 64, actor, settings, client
+                )
+            assert stale_hash.value.status_code == 409
+            await DocumentVersionDocument.get_pymongo_collection().update_one(
+                {"_id": version.id}, {"$set": {"status": "archived"}}
+            )
             connection_id = uuid4()
             google_connections = GoogleConnectionService(settings)
             connection = IntegrationConnectionDocument(
@@ -134,10 +150,6 @@ def test_mail_jobs_are_idempotent_pdf_only_and_timeouts_are_not_retried(tmp_path
                 pdf_hash=pdf_hash,
                 status="archived",
             ).insert()
-            ArtifactStore(settings.ARTIFACT_ROOT).write_immutable(
-                document.id, version.id, "letter.pdf", pdf_bytes, pdf_hash
-            )
-
             request = MailDispatchRequest(
                 document_id=document.id,
                 version_id=version.id,

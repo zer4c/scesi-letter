@@ -15,6 +15,7 @@ import {
 import { createCollaborativeDocument } from '../../core/collaboration/yjsTransport.js';
 import LetterAssistancePanel from '../automation/components/LetterAssistancePanel.jsx';
 import RecipientContactFields from '../contact/components/RecipientContactFields.jsx';
+import DocumentMailPanel from '../mail/components/DocumentMailPanel.jsx';
 
 const CodeMirror = lazy(() => import('@uiw/react-codemirror'));
 const PdfPreview = lazy(() => import('./components/PdfPreview.jsx'));
@@ -159,6 +160,7 @@ export default function DocumentEditorPage() {
   const [body, setBody] = useState('');
   const [identifier, setIdentifier] = useState(null);
   const [currentVersion, setCurrentVersion] = useState(null);
+  const [finalizedVersionId, setFinalizedVersionId] = useState(null);
   const [collab, setCollab] = useState(null);
   const [collabStatus, setCollabStatus] = useState('connecting');
   const [synced, setSynced] = useState(false);
@@ -201,6 +203,7 @@ export default function DocumentEditorPage() {
         fieldsRef.current = document.metadata;
         setIdentifier(document.metadata.identifier);
         setCurrentVersion(document.current_version);
+        setFinalizedVersionId(document.finalized_version_id || null);
         setSaveState(document.current_version ? 'saved' : 'draft');
       })
       .catch((error) => {
@@ -474,6 +477,16 @@ export default function DocumentEditorPage() {
             csrfToken={csrfToken}
             body={body}
             isNumbered={Boolean(identifier)}
+          />
+          <DocumentMailPanel
+            documentId={documentId}
+            csrfToken={csrfToken}
+            currentVersionId={currentVersion}
+            finalizedVersionId={finalizedVersionId}
+            identifier={identifier}
+            topic={fields?.topic || ''}
+            recipientEmail={fields?.recipient?.email || ''}
+            onFinalized={setFinalizedVersionId}
           />
           <button className="button-primary workspace-save" disabled={!synced || saveState === 'saving'} onClick={handleSave} type="button">
             Guardar

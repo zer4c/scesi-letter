@@ -76,6 +76,7 @@ class DocumentSummary(BaseModel):
     draft_revision: int
     source_hash: str
     current_version: UUID | None
+    finalized_version_id: UUID | None
     identifier_year: int | None
     created_at: datetime
 
@@ -124,6 +125,12 @@ class DocumentSaveResponse(BaseModel):
     document: DocumentSummary
     version: DocumentVersionSummary
     changed: bool
+
+
+class FinalizeVersionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    expected_pdf_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
 class JobStatusResponse(BaseModel):
